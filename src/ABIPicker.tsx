@@ -1,0 +1,51 @@
+import { ethers } from 'ethers';
+import { EventFragment, FunctionFragment } from 'ethers/utils/abi-coder';
+import React, { Component } from 'react';
+import ExpansionPanel from '@material-ui/core/ExpansionPanel';
+import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
+import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
+import Typography from '@material-ui/core/Typography';
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import FunctionABIEntry from './FunctionABIEntry';
+
+interface Props {
+  provider: ethers.providers.Provider;
+  abi: Array<EventFragment | FunctionFragment>;
+  const: boolean;
+}
+
+interface State {
+}
+
+function isFunctionFragment(frag: EventFragment | FunctionFragment): frag is FunctionFragment {
+  return (frag as FunctionFragment).constant !== undefined;
+}
+
+class ABIPicker extends Component<Props, State> {
+  constructor(props : Props) {
+    super(props);
+  }
+
+  componentWillUnmount() {
+  }
+
+  render() {
+    const functions = this.props.abi.filter(frag => isFunctionFragment(frag) && frag.constant == this.props.const) as Array<FunctionFragment>;
+    functions.sort((a, b) => a.name.localeCompare(b.name));
+    const panels = functions.map(func => {
+      return (
+        <ExpansionPanel key={func.name}>
+          <ExpansionPanelSummary expandIcon={<ExpandMoreIcon />}>
+            <Typography>{func.name}</Typography>
+          </ExpansionPanelSummary>
+          <ExpansionPanelDetails>
+            <FunctionABIEntry provider={this.props.provider} abi={func} />
+          </ExpansionPanelDetails>
+        </ExpansionPanel>
+      );
+    });
+    return panels;
+  }
+};
+
+export default ABIPicker;
