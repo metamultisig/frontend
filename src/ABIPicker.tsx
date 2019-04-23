@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { BigNumber} from 'ethers/utils';
 import { EventFragment, FunctionFragment } from 'ethers/utils/abi-coder';
 import React, { Component } from 'react';
 import ExpansionPanel from '@material-ui/core/ExpansionPanel';
@@ -8,10 +9,13 @@ import Typography from '@material-ui/core/Typography';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import FunctionABIEntry from './FunctionABIEntry';
 
+type FieldValue = string|Uint8Array|BigNumber|null;
+
 interface Props {
   provider: ethers.providers.Provider;
   abi: Array<EventFragment | FunctionFragment>;
   const: boolean;
+  onSubmit?: (abi: FunctionFragment, args: Array<FieldValue>) => any;
 }
 
 interface State {
@@ -24,9 +28,16 @@ function isFunctionFragment(frag: EventFragment | FunctionFragment): frag is Fun
 class ABIPicker extends Component<Props, State> {
   constructor(props : Props) {
     super(props);
+    this.onSubmit = this.onSubmit.bind(this);
   }
 
   componentWillUnmount() {
+  }
+
+  onSubmit(abi: FunctionFragment, args: Array<FieldValue>) {
+    if(this.props.onSubmit) {
+      this.props.onSubmit(abi, args);
+    }
   }
 
   render() {
@@ -39,7 +50,7 @@ class ABIPicker extends Component<Props, State> {
             <Typography>{func.name}</Typography>
           </ExpansionPanelSummary>
           <ExpansionPanelDetails>
-            <FunctionABIEntry provider={this.props.provider} abi={func} />
+            <FunctionABIEntry provider={this.props.provider} abi={func} onSubmit={(args) => this.onSubmit(func, args)} />
           </ExpansionPanelDetails>
         </ExpansionPanel>
       );

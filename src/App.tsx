@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { BigNumber } from 'ethers/utils';
 import { EventFragment, FunctionFragment } from 'ethers/utils/abi-coder';
 import React, { Component } from 'react';
 import logo from './logo.svg';
@@ -8,7 +9,11 @@ import ABIPicker from './ABIPicker';
 import ABIFetcher from './ABIFetcher';
 import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
 
-declare var ethereum: ethers.providers.AsyncSendable;
+interface Ethereum extends ethers.providers.AsyncSendable {
+  enable: () => any;
+}
+
+declare var ethereum: Ethereum;
 
 const styles = (theme: Theme) =>
   createStyles({
@@ -22,6 +27,8 @@ const styles = (theme: Theme) =>
     },
   });
 
+type FieldValue = string|Uint8Array|BigNumber|null;
+
 interface State {
   abi: Array<EventFragment | FunctionFragment>;
   contractAddress: string;
@@ -30,7 +37,7 @@ interface State {
 interface Props extends WithStyles<typeof styles> {}
 
 class App extends Component<Props, State> {
-  provider: ethers.providers.Provider;
+  provider: ethers.providers.JsonRpcProvider;
   abiFetcher: ABIFetcher;
 
   constructor(props: Props) {
@@ -38,6 +45,7 @@ class App extends Component<Props, State> {
       this.provider = new ethers.providers.Web3Provider(ethereum);
       this.abiFetcher = new ABIFetcher(this.provider);
       this.onAddressChange = this.onAddressChange.bind(this);
+      this.onSubmit = this.onSubmit.bind(this);
       this.state = {
         abi: [],
         contractAddress: '',
@@ -58,12 +66,20 @@ class App extends Component<Props, State> {
     }
   }
 
+  async onSubmit(abi: FunctionFragment, args: Array<FieldValue>) {
+    await ethereum.enable();
+    const contract = new ethers.Contract(this.state.contractAddress, this.state.abi, this.provider)
+      .connect(this.provider.getSigner());
+    const tx = await contract[abi.name](...args);
+    console.log(tx.hash);
+  }
+
   render() {
     const { classes } = this.props;
     return (
       <div className="App">
         <AddressField label="Address" provider={this.provider} onChange={this.onAddressChange} value={this.state.contractAddress} />
-        <ABIPicker const={false} provider={this.provider} abi={this.state.abi} />
+        <ABIPicker const={false} provider={this.provider} abi={this.state.abi} onSubmit={this.onSubmit} />
       </div>
     );
   }

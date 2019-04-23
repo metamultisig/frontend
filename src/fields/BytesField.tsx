@@ -14,8 +14,8 @@ const styles = (theme: Theme) =>
 
 interface Props extends WithStyles<typeof styles> {
   label: string;
-  value: string;
-  onChange?: (value: string, valid: boolean) => any;
+  value: Uint8Array|null;
+  onChange?: (value: Uint8Array, valid: boolean) => any;
 }
 
 class BytesField extends Component<Props, {}> {
@@ -26,15 +26,16 @@ class BytesField extends Component<Props, {}> {
 
   onChange(event: React.ChangeEvent<HTMLInputElement>) {
     if(this.props.onChange) {
-      this.props.onChange(event.target.value, true);
+      this.props.onChange(new TextEncoder().encode(event.target.value), true);
     }
   }
 
   render() {
     const { label, value, classes } = this.props;
+    const decodedValue = (value == null)?'':new TextDecoder().decode(value);
     return <FormControl className={classes.formControl}>
       <InputLabel htmlFor="component-simple">{label}</InputLabel>
-      <Input id="component-simple" placeholder="(Bytes)" onChange={this.onChange} value={value} />
+      <Input id="component-simple" placeholder="(Bytes)" onChange={this.onChange} value={decodedValue} />
     </FormControl>
   }
 };

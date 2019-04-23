@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import { BigNumber } from 'ethers/utils';
 import React, { Component } from 'react';
 import { FunctionFragment } from 'ethers/utils/abi-coder';
 import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
@@ -19,10 +20,13 @@ const styles = (theme: Theme) =>
 interface Props extends WithStyles<typeof styles> {
   provider: ethers.providers.Provider;
   abi: FunctionFragment;
+  onSubmit?: (args: Array<FieldValue>) => any;
 }
 
+type FieldValue = string|Uint8Array|BigNumber|null;
+
 interface State {
-  fields: Array<{value: string, valid: boolean}>;
+  fields: Array<{value: FieldValue, valid: boolean}>;
 }
 
 class FunctionABIEntry extends Component<Props, State> {
@@ -30,17 +34,24 @@ class FunctionABIEntry extends Component<Props, State> {
     super(props);
 
     this.state = {
-      fields: Array(props.abi.inputs.length).fill({value: '', valid: false}),
+      fields: Array(props.abi.inputs.length).fill({value: null, valid: false}),
     };
     this.onChange = this.onChange.bind(this);
+    this.onSubmit = this.onSubmit.bind(this);
   }
 
-  onChange(id: number, value: string, valid: boolean) {
+  onChange(id: number, value: FieldValue, valid: boolean) {
     const fields = this.state.fields;
     fields[id] = {value: value, valid: valid};
     this.setState({
       fields: fields,
     });
+  }
+
+  onSubmit(e: React.MouseEvent<HTMLElement, MouseEvent>) {
+    if(this.props.onSubmit) {
+      this.props.onSubmit(this.state.fields.map(field => field.value));
+    }
   }
 
   render() {
@@ -54,7 +65,8 @@ class FunctionABIEntry extends Component<Props, State> {
         variant="contained"
         className={classes.button}
         color="primary"
-        disabled={!this.state.fields.reduce((acc, cur) => acc && cur.valid, true)}>
+        disabled={!this.state.fields.reduce((acc, cur) => acc && cur.valid, true)}
+        onClick={this.onSubmit}>
         Submit
       </Button>
     </div>;

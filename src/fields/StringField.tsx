@@ -12,7 +12,7 @@ const styles = (theme: Theme) =>
 
 interface Props extends WithStyles<typeof styles> {
   label: string;
-  value: string;
+  value: string|null;
   onChange?: (value: string, valid: boolean) => any;
 }
 
@@ -35,7 +35,7 @@ class StringField extends Component<Props, {}> {
       className={classes.textField}
       placeholder="(String)"
       onChange={this.onChange}
-      value={value}
+      value={value || ''}
     />
   }
 };

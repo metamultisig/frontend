@@ -1,3 +1,4 @@
+import { BigNumber, bigNumberify } from 'ethers/utils';
 import React, { Component } from 'react';
 import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
@@ -12,9 +13,9 @@ const styles = (theme: Theme) =>
 
 interface Props extends WithStyles<typeof styles> {
   label: string;
-  value: string;
+  value: BigNumber|null;
   signed: boolean;
-  onChange?: (value: string, valid: boolean) => any;
+  onChange?: (value: BigNumber|null, valid: boolean) => any;
 }
 
 class Bytes32Field extends Component<Props, {}> {
@@ -29,7 +30,11 @@ class Bytes32Field extends Component<Props, {}> {
       if(this.props.signed && value.startsWith('-')) {
         value = value.slice(1);
       }
-      this.props.onChange(value, true);
+      if(value.trim() == '') {
+        this.props.onChange(null, true);
+      } else {
+        this.props.onChange(bigNumberify(value), true);
+      }
     }
   }
 
@@ -40,7 +45,8 @@ class Bytes32Field extends Component<Props, {}> {
       className={classes.textField}
       onChange={this.onChange}
       type="number"
-      value={value}
+      value={value == null?'':value.toString()}
+      error={value == null}
       placeholder={this.props.signed?'(Integer)':'(Unsigned Integer)'}
     />
   }
