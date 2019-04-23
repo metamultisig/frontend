@@ -3,6 +3,9 @@ import React, { Component } from 'react';
 import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 
+const int_re = /^[1-9][0-9]*$/
+const uint_re = /^-?[1-9][0-9]*$/
+
 const styles = (theme: Theme) =>
   createStyles({
     textField: {
@@ -26,11 +29,9 @@ class Bytes32Field extends Component<Props, {}> {
 
   onChange(event: React.ChangeEvent<HTMLInputElement>) {
     if(this.props.onChange) {
-      var value = event.target.value;
-      if(this.props.signed && value.startsWith('-')) {
-        value = value.slice(1);
-      }
-      if(value.trim() == '') {
+      const value = event.target.value;
+      const valid = this.props.signed?uint_re.test(value):int_re.test(value);
+      if(!valid && value.trim() == '') {
         this.props.onChange(null, true);
       } else {
         this.props.onChange(bigNumberify(value), true);

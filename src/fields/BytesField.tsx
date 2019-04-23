@@ -21,6 +21,10 @@ interface Props extends WithStyles<typeof styles> {
 class BytesField extends Component<Props, {}> {
   constructor(props: Props) {
     super(props);
+    // Hack to set valid to true.
+    if(props.onChange) {
+      props.onChange(props.value || new Uint8Array(), true);
+    }
     this.onChange = this.onChange.bind(this);
   }
 

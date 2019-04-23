@@ -3,7 +3,7 @@ import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/s
 import TextField from '@material-ui/core/TextField';
 import InputAdornment from '@material-ui/core/InputAdornment';
 
-const bytes32_re = /^[0-9a-fA-f]{64}$/;
+const bytes32_re = /^0x[0-9a-fA-f]{64}$/;
 
 const styles = (theme: Theme) =>
   createStyles({
@@ -27,7 +27,8 @@ class Bytes32Field extends Component<Props, {}> {
 
   onChange(event: React.ChangeEvent<HTMLInputElement>) {
     if(this.props.onChange) {
-      this.props.onChange("0x" + event.target.value, bytes32_re.test(event.target.value));
+      const value = "0x" + event.target.value
+      this.props.onChange(value, bytes32_re.test(value));
     }
   }
 
