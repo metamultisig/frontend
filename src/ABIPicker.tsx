@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
 import { BigNumber} from 'ethers/utils';
-import { EventFragment, FunctionFragment } from 'ethers/utils/abi-coder';
+import { Interface, FunctionDescription } from 'ethers/utils';
 import React, { Component } from 'react';
 import ExpansionPanel from '@material-ui/core/ExpansionPanel';
 import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
@@ -13,16 +13,12 @@ type FieldValue = string|Uint8Array|BigNumber|undefined;
 
 interface Props {
   provider: ethers.providers.Provider;
-  abi: Array<EventFragment | FunctionFragment>;
-  const: boolean;
-  onSubmit?: (abi: FunctionFragment, args: Array<FieldValue>) => any;
+  interface: Interface;
+  type: string;
+  onSubmit?: (abi: FunctionDescription, args: Array<FieldValue>) => any;
 }
 
 interface State {
-}
-
-function isFunctionFragment(frag: EventFragment | FunctionFragment): frag is FunctionFragment {
-  return (frag as FunctionFragment).constant !== undefined;
 }
 
 class ABIPicker extends Component<Props, State> {
@@ -34,14 +30,15 @@ class ABIPicker extends Component<Props, State> {
   componentWillUnmount() {
   }
 
-  onSubmit(abi: FunctionFragment, args: Array<FieldValue>) {
+  onSubmit(abi: FunctionDescription, args: Array<FieldValue>) {
     if(this.props.onSubmit) {
       this.props.onSubmit(abi, args);
     }
   }
 
   render() {
-    const functions = this.props.abi.filter(frag => isFunctionFragment(frag) && frag.constant == this.props.const) as Array<FunctionFragment>;
+    const functions = Object.values(this.props.interface.functions).filter(
+      desc => (this.props.type == desc.type));
     functions.sort((a, b) => a.name.localeCompare(b.name));
     const panels = functions.map(func => {
       return (

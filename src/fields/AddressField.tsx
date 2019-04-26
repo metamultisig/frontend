@@ -21,7 +21,7 @@ class AddressField extends Component<Props, {}> {
     this.tryResolveName = this.tryResolveName.bind(this);
     this.valid = props.value !== undefined && address_re.test(props.value);
 
-    if(props.value !== undefined && props.value.includes('.') && !props.value.endsWith('.')) {
+    if(props.value  && props.value.includes('.') && !props.value.endsWith('.')) {
       this.timerId = setTimeout(this.tryResolveName, 200);
     }
   }

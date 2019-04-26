@@ -23,7 +23,7 @@ class MultisigWatcher {
     this.walletsWatched = {};
     this.wallets = {};
 
-    const multisigInterface = new ethers.utils.Interface(multisigABI);
+    const multisigInterface = new ethers.utils.Interface(Array.from(multisigABI));
     this.event = multisigInterface.events['KeyholderChanged'];
   }
 

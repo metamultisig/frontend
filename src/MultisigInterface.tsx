@@ -4,22 +4,9 @@ import React, { Component } from 'react';
 import { FunctionFragment } from 'ethers/utils/abi-coder';
 import { abi as multisigABI } from '@metamultisig/contract/build/contracts/MetaMultisig.json';
 import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
-import AddIcon from '@material-ui/icons/Add';
-import PersonAddIcon from '@material-ui/icons/PersonAdd';
-import Button from '@material-ui/core/Button';
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogTitle from '@material-ui/core/DialogTitle';
 import Divider from '@material-ui/core/Divider';
-import Fab from '@material-ui/core/Fab';
 import Grid from '@material-ui/core/Grid';
-import Icon from '@material-ui/core/Icon';
 import Link from '@material-ui/core/Link';
-import List from '@material-ui/core/List';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemIcon from '@material-ui/core/ListItemIcon';
-import ListItemText from '@material-ui/core/ListItemText';
 import Paper from '@material-ui/core/Paper';
 import Table from '@material-ui/core/Table';
 import TableHead from '@material-ui/core/TableHead';
@@ -29,8 +16,8 @@ import TableCell from '@material-ui/core/TableCell';
 import Typography from '@material-ui/core/Typography';
 
 import MultisigWatcher from './MultisigWatcher';
-import AddressField from './fields/AddressField';
-import IntField from './fields/IntField';
+import MultisigTransactionCreator from './MultisigTransactionCreator';
+import FunctionABIEntry from './FunctionABIEntry';
 
 const styles = (theme: Theme) =>
   createStyles({
@@ -52,12 +39,6 @@ const styles = (theme: Theme) =>
     table: {
       minwidth: 700,
     },
-    fab: {
-      margin: theme.spacing.unit,
-      position: 'absolute',
-      bottom: theme.spacing.unit * 2,
-      right: theme.spacing.unit * 2,
-    }
   });
 
 interface WalletInfo {
@@ -77,6 +58,7 @@ interface State {
   keyholders: {[key: string]: number}|null;
   showTxTypeDialog: boolean;
   showAddKeyholderDialog: boolean;
+  showSetThresholdDialog: boolean;
 }
 
 class MultisigInterface extends Component<Props, State> {
@@ -92,6 +74,7 @@ class MultisigInterface extends Component<Props, State> {
       keyholders: null,
       showTxTypeDialog: false,
       showAddKeyholderDialog: false,
+      showSetThresholdDialog: false,
     };
 
     this.watcher = new MultisigWatcher(this.props.provider);
@@ -122,31 +105,6 @@ class MultisigInterface extends Component<Props, State> {
     this.watcher.removeMultisigWatch(this.props.wallet.address);
   }
 
-  onNewTxClick = (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
-    this.setState({
-      showTxTypeDialog: true,
-    });
-  }
-
-  onNewTxClose = (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
-    this.setState({
-      showTxTypeDialog: false,
-    });
-  }
-
-  onAddKeyholderClick = (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
-    this.setState({
-      showTxTypeDialog: false,
-      showAddKeyholderDialog: true,
-    });
-  }
-
-  onAddKeyholderClose = (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
-    this.setState({
-      showAddKeyholderDialog: false,
-    });
-  }
-
   render() {
     const { classes, wallet } = this.props;
 
@@ -169,32 +127,7 @@ class MultisigInterface extends Component<Props, State> {
 
     return (
       <>
-        <Dialog open={this.state.showTxTypeDialog} onClose={this.onNewTxClose} aria-labelledby="txtype-title">
-          <DialogTitle id="txtype-title">Select Transaction Type</DialogTitle>
-          <div>
-            <List>
-              <ListItem button onClick={this.onAddKeyholderClick} key="addKeyholder">
-                <ListItemIcon><PersonAddIcon /></ListItemIcon>
-                <ListItemText primary="Add Keyholder" />
-              </ListItem>
-            </List>
-          </div>
-        </Dialog>
-
-        <Dialog open={this.state.showAddKeyholderDialog} onClose={this.onAddKeyholderClose} aria-labelledby="addkeyholder-title">
-          <DialogTitle id="addkeyholder-title">Add a Keyholder</DialogTitle>
-          <DialogContent>
-            <AddressField provider={this.props.provider} label="Address" />
-            <IntField label="Weight" signed={false} />
-          </DialogContent>
-          <DialogActions>
-            <Button color="primary">Add</Button>
-          </DialogActions>
-        </Dialog>
-
-        <Fab color="primary" onClick={this.onNewTxClick} aria-label="New Transaction" className={classes.fab}>
-          <AddIcon />
-        </Fab>
+        <MultisigTransactionCreator provider={this.props.provider} contract={this.contract} />
 
         <Typography variant="h6">Overview</Typography>
         <Paper className={classes.paper}>

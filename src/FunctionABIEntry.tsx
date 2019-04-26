@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { BigNumber } from 'ethers/utils';
 import React, { Component } from 'react';
-import { FunctionFragment } from 'ethers/utils/abi-coder';
+import { FunctionDescription } from 'ethers/utils';
 import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
 import ABIField from './fields/ABIField';
 import Button from '@material-ui/core/Button';
@@ -19,7 +19,7 @@ const styles = (theme: Theme) =>
 
 interface Props extends WithStyles<typeof styles> {
   provider: ethers.providers.Provider;
-  abi: FunctionFragment;
+  abi: FunctionDescription;
   onSubmit?: (args: Array<FieldValue>) => any;
 }
 
