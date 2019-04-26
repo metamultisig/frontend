@@ -6,22 +6,24 @@ interface Props {
   provider: ethers.providers.Provider;
   label: string;
   value?: string;
-  onChange?: (value: string, valid: boolean, addr: string) => any;
+  onChange?: (value: string, valid: boolean, name?: string) => any;
 }
 
 const address_re = /^0x[0-9a-fA-F]{40}$/;
 
-class AddressField extends Component<Props, {}> {
-  private valid: boolean;
+class AddressField extends Component<Props, {value: string, valid: boolean}> {
   private timerId?: ReturnType<typeof setTimeout>;
 
   constructor(props : Props) {
     super(props);
     this.onChange = this.onChange.bind(this);
     this.tryResolveName = this.tryResolveName.bind(this);
-    this.valid = props.value !== undefined && address_re.test(props.value);
+    this.state = {
+      value: props.value || '',
+      valid: props.value !== undefined && address_re.test(props.value),
+    }
 
-    if(props.value  && props.value.includes('.') && !props.value.endsWith('.')) {
+    if(props.value && props.value.includes('.') && !props.value.endsWith('.')) {
       this.timerId = setTimeout(this.tryResolveName, 200);
     }
   }
@@ -29,27 +31,35 @@ class AddressField extends Component<Props, {}> {
   onChange(e: React.ChangeEvent<HTMLInputElement>) {
     if(!e.target.value) return;
 
-    this.valid = address_re.test(e.target.value);
+    const value = e.target.value;
+    const valid = address_re.test(e.target.value);
 
     if(this.props.onChange) {
-      this.props.onChange(e.target.value, address_re.test(e.target.value), e.target.value);
+      this.props.onChange(value, valid);
     }
 
-    if(e.target.value.includes('.') && !e.target.value.endsWith('.')) {
+    if(value.includes('.') && !value.endsWith('.')) {
       if(this.timerId) {
         clearTimeout(this.timerId);
         this.timerId = undefined;
       }
       this.timerId = setTimeout(this.tryResolveName, 200);
     }
+
+    this.setState({
+      value: value,
+      valid: valid,
+    });
   }
 
   async tryResolveName() {
-    const addr = await this.props.provider.resolveName(this.props.value as string);
+    const addr = await this.props.provider.resolveName(this.state.value);
     if(addr) {
-      this.valid = true;
+      this.setState({
+        valid: true,
+      });
       if(this.props.onChange) {
-        this.props.onChange(this.props.value as string, true, addr);
+        this.props.onChange(addr, true, this.state.value);
       }
     }
   }
@@ -65,8 +75,8 @@ class AddressField extends Component<Props, {}> {
       <TextField
         onChange={this.onChange}
         label={this.props.label}
-        value={this.props.value || ''}
-        error={!this.valid}
+        value={this.state.value}
+        error={!this.state.valid}
         placeholder="name.eth or 0x..."
       />
     );

@@ -78,7 +78,7 @@ class MultisigInterface extends Component<Props, State> {
     };
 
     this.watcher = new MultisigWatcher(this.props.provider);
-    this.contract = new ethers.Contract(this.props.wallet.address, Array.from(multisigABI), this.props.provider);
+    this.contract = new ethers.Contract(this.props.wallet.address, Array.from(multisigABI), this.props.provider.getSigner());
   }
 
   componentDidMount() {

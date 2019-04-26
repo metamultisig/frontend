@@ -18,6 +18,7 @@ import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemIcon from '@material-ui/core/ListItemIcon';
 import ListItemText from '@material-ui/core/ListItemText';
+import Snackbar from '@material-ui/core/Snackbar';
 import Typography from '@material-ui/core/Typography';
 
 import MultisigWatcher from './MultisigWatcher';
@@ -42,7 +43,10 @@ interface State {
   showTxTypeDialog: boolean;
   showAddKeyholderDialog: boolean;
   showSetThresholdDialog: boolean;
+  lastTxId?: string;
 }
+
+type FieldValue = string|Uint8Array|BigNumber|undefined;
 
 class MultisigTransactionCreator extends Component<Props, State> {
   constructor(props: Props) {
@@ -99,6 +103,39 @@ class MultisigTransactionCreator extends Component<Props, State> {
     });
   }
 
+  onAddKeyholder = async (args: Array<FieldValue>) => {
+    this.setState({
+      showAddKeyholderDialog: false,
+    });
+
+    const descriptor = this.props.contract.interface.functions['setKeyholderWeight'];
+    const encoded = descriptor.encode(args);
+    var nonce = await this.props.contract.nextNonce();
+    var tx = await this.props.contract.submit(
+      this.props.contract.address,
+      0,
+      encoded,
+      nonce,
+      []
+    );
+    this.setState({
+      lastTxId: tx.hash,
+    });
+  }
+
+  onSetThreshold = (args: Array<FieldValue>) => {
+  }
+
+  closeTxSnackbar = (e: React.SyntheticEvent<any, Event>, reason: string) => {
+    if(reason == 'clickaway') {
+      return;
+    }
+
+    this.setState({
+      lastTxId: undefined,
+    });
+  }
+
   render() {
     const { classes, contract } = this.props;
     return (
@@ -122,16 +159,36 @@ class MultisigTransactionCreator extends Component<Props, State> {
         <Dialog open={this.state.showAddKeyholderDialog} onClose={this.onAddKeyholderClose} aria-labelledby="addkeyholder-title">
           <DialogTitle id="addkeyholder-title">Add a Keyholder</DialogTitle>
           <DialogContent>
-            <FunctionABIEntry provider={this.props.provider} abi={contract.interface.functions['setKeyholderWeight']} />
+            <FunctionABIEntry
+              provider={this.props.provider}
+              abi={contract.interface.functions['setKeyholderWeight']}
+              onSubmit={this.onAddKeyholder} />
           </DialogContent>
         </Dialog>
 
         <Dialog open={this.state.showSetThresholdDialog} onClose={this.onSetThresholdClose} aria-labelledby="setthreshold-title">
           <DialogTitle id="setthreshold-title">Set Signing Threshold</DialogTitle>
           <DialogContent>
-            <FunctionABIEntry provider={this.props.provider} abi={contract.interface.functions['setThreshold']} />
+            <FunctionABIEntry
+              provider={this.props.provider}
+              abi={contract.interface.functions['setThreshold']}
+              onSubmit={this.onSetThreshold} />
           </DialogContent>
         </Dialog>
+
+        <Snackbar
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'left',
+          }}
+          open={this.state.lastTxId !== undefined}
+          autoHideDuration={6000}
+          onClose={this.closeTxSnackbar}
+          ContentProps={{
+            'aria-describedby': 'message-id',
+          }}
+          message={<span id="message-id">Transaction <Link href={"https://etherscan.io/tx/" + this.state.lastTxId}>{this.state.lastTxId}</Link> sent</span>}
+        />
 
         <Fab color="primary" onClick={this.onNewTxClick} aria-label="New Transaction" className={classes.fab}>
           <AddIcon />
