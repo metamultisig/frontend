@@ -9,7 +9,7 @@ import Typography from '@material-ui/core/Typography';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import FunctionABIEntry from './FunctionABIEntry';
 
-type FieldValue = string|Uint8Array|BigNumber|null;
+type FieldValue = string|Uint8Array|BigNumber|undefined;
 
 interface Props {
   provider: ethers.providers.Provider;

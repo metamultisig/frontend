@@ -23,10 +23,10 @@ interface Props extends WithStyles<typeof styles> {
   onSubmit?: (args: Array<FieldValue>) => any;
 }
 
-type FieldValue = string|Uint8Array|BigNumber|null;
+type FieldValue = string|Uint8Array|BigNumber|undefined;
 
 interface State {
-  fields: Array<{value: FieldValue, valid: boolean}>;
+  fields: Array<{value?: FieldValue, valid: boolean}>;
 }
 
 class FunctionABIEntry extends Component<Props, State> {

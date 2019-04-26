@@ -15,7 +15,7 @@ const styles = (theme: Theme) =>
 
 interface Props extends WithStyles<typeof styles> {
   label: string;
-  value: string|null;
+  value?: string;
   onChange?: (value: string, valid: boolean) => any;
 }
 

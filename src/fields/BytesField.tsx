@@ -14,7 +14,7 @@ const styles = (theme: Theme) =>
 
 interface Props extends WithStyles<typeof styles> {
   label: string;
-  value: Uint8Array|null;
+  value?: Uint8Array;
   onChange?: (value: Uint8Array, valid: boolean) => any;
 }
 

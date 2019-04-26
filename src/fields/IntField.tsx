@@ -16,9 +16,9 @@ const styles = (theme: Theme) =>
 
 interface Props extends WithStyles<typeof styles> {
   label: string;
-  value: BigNumber|null;
+  value?: BigNumber;
   signed: boolean;
-  onChange?: (value: BigNumber|null, valid: boolean) => any;
+  onChange?: (value: BigNumber|undefined, valid: boolean) => any;
 }
 
 class Bytes32Field extends Component<Props, {}> {
@@ -32,7 +32,7 @@ class Bytes32Field extends Component<Props, {}> {
       const value = event.target.value;
       const valid = this.props.signed?uint_re.test(value):int_re.test(value);
       if(!valid && value.trim() == '') {
-        this.props.onChange(null, true);
+        this.props.onChange(undefined, true);
       } else {
         this.props.onChange(bigNumberify(value), true);
       }

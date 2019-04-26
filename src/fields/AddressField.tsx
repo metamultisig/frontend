@@ -5,7 +5,7 @@ import TextField from '@material-ui/core/TextField';
 interface Props {
   provider: ethers.providers.Provider;
   label: string;
-  value: string|null;
+  value?: string;
   onChange?: (value: string, valid: boolean, addr: string) => any;
 }
 
@@ -19,9 +19,9 @@ class AddressField extends Component<Props, {}> {
     super(props);
     this.onChange = this.onChange.bind(this);
     this.tryResolveName = this.tryResolveName.bind(this);
-    this.valid = props.value != null && address_re.test(props.value);
+    this.valid = props.value !== undefined && address_re.test(props.value);
 
-    if(props.value != null && props.value.includes('.') && !props.value.endsWith('.')) {
+    if(props.value !== undefined && props.value.includes('.') && !props.value.endsWith('.')) {
       this.timerId = setTimeout(this.tryResolveName, 200);
     }
   }
