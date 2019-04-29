@@ -22,7 +22,7 @@ import MultisigTransactionCreator from './MultisigTransactionCreator';
 import FunctionABIEntry from './FunctionABIEntry';
 import AddressRenderer from './AddressRenderer';
 import { SigningRequest } from './BackendSchema';
-import MultisigSigningRequestRenderer from './MultisigSigningRequestRenderer';
+import MultisigSigningRequests from './MultisigSigningRequests';
 
 const styles = (theme: Theme) =>
   createStyles({
@@ -193,18 +193,7 @@ class MultisigInterface extends Component<Props, State> {
         </Paper>
 
         <Typography variant="h6">Signing Requests</Typography>
-        <Query
-          query={getSigningRequests}
-          variables={{address: this.props.wallet.address}}
-        >
-          {(result: QueryResult) => {
-            if(result.loading) return <Paper className={classes.paper}><Typography>Loading...</Typography></Paper>;
-            if(result.error) return <Paper className={classes.paper}><Typography>Error loading signing requests.</Typography></Paper>;
-            return result.data.multisig.signingRequests.map((sr: SigningRequest) => (
-              <MultisigSigningRequestRenderer key={sr.id} provider={this.props.provider} request={sr} />
-            ));
-          }}
-        </Query>
+        <MultisigSigningRequests provider={this.props.provider} address={this.props.wallet.address} />
       </>
     );
   }
