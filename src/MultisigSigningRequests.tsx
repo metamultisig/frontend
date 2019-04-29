@@ -5,6 +5,7 @@ import { BigNumber } from 'ethers/utils';
 import React, { Component } from 'react';
 import { FunctionFragment } from 'ethers/utils/abi-coder';
 import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
+import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
 import Typography from '@material-ui/core/Typography';
 
@@ -61,18 +62,22 @@ class MultisigSigningRequests extends Component<Props, {}> {
     const { address, classes } = this.props;
 
     return (
-      <Query<Data, Variables>
-        query={getSigningRequests}
-        variables={{address: this.props.address}}
-      >
-        {(result) => {
-          if(result.loading) return <Paper className={classes.paper}><Typography>Loading...</Typography></Paper>;
-          if(result.error || !result.data) return <Paper className={classes.paper}><Typography>Error loading signing requests.</Typography></Paper>;
-          return result.data.multisig.signingRequests.map((sr: SigningRequest) => (
-            <MultisigSigningRequestRenderer key={sr.id} provider={this.props.provider} request={sr} />
-          ));
-        }}
-      </Query>
+      <Grid container spacing={24}>
+        <Query<Data, Variables>
+          query={getSigningRequests}
+          variables={{address: this.props.address}}
+        >
+          {(result) => {
+            if(result.loading) return <Paper className={classes.paper}><Typography>Loading...</Typography></Paper>;
+            if(result.error || !result.data) return <Paper className={classes.paper}><Typography>Error loading signing requests.</Typography></Paper>;
+            return result.data.multisig.signingRequests.map((sr: SigningRequest) => (
+              <Grid item xs={6}>
+                <MultisigSigningRequestRenderer key={sr.id} provider={this.props.provider} request={sr} />
+              </Grid>
+            ));
+          }}
+        </Query>
+      </Grid>
     );
   }
 };

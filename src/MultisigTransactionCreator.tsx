@@ -25,6 +25,7 @@ import Typography from '@material-ui/core/Typography';
 
 import MultisigWatcher from './MultisigWatcher';
 import FunctionABIEntry from './FunctionABIEntry';
+import findFunctionDefinition from './findFunctionDefinition';
 
 const styles = (theme: Theme) =>
   createStyles({
@@ -122,6 +123,7 @@ class MultisigTransactionCreator extends Component<Props, State> {
 
   onAddKeyholder = async (args: Array<FieldValue>, submit: (variables: any) => any) => {
     const descriptor = this.props.contract.interface.functions['setKeyholderWeight'];
+    const fragment = findFunctionDefinition(this.props.contract.interface.abi, descriptor.sighash);
     const encoded = descriptor.encode(args);
     const nonce = (await this.props.contract.nextNonce()).toNumber();
     const id = await this.props.contract.getTransactionHash(this.props.contract.address, 0, encoded, nonce);
@@ -132,6 +134,7 @@ class MultisigTransactionCreator extends Component<Props, State> {
         request: {
           destination: this.props.contract.address,
           data: encoded,
+          abi: fragment,
           nonce: nonce,
           signatures: [sig],
         },

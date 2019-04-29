@@ -2,7 +2,6 @@ import { ethers } from 'ethers';
 import React, { Component } from 'react';
 import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
 import IconButton from '@material-ui/core/IconButton';
-import Typography from '@material-ui/core/Typography';
 import OpenInNewIcon from '@material-ui/icons/OpenInNew';
 import FilterNoneIcon from '@material-ui/icons/FilterNone';
 
@@ -17,6 +16,8 @@ const styles = (theme: Theme) =>
 interface Props extends WithStyles<typeof styles> {
   provider: ethers.providers.Provider;
   value: string;
+  showCopyIcon?: boolean;
+  showLaunchIcon?: boolean;
 }
 
 interface State {
@@ -43,7 +44,7 @@ class AddressRenderer extends Component<Props, State> {
       props.provider.lookupAddress(props.value).then((name) => {
         this.setState({
           name: name,
-        })
+        });
       });
     }
   }
@@ -57,19 +58,25 @@ class AddressRenderer extends Component<Props, State> {
     textField.remove();
   }
 
-  render() {
-    let {classes} = this.props;
+  label() {
     let {name, address} = this.state;
-    let label = (name
-      ?name
-      :(address?address.slice(0, 6) + '…' + address.slice(address.length - 4):''));
-    return (
-      <Typography>
-        {label}
-        <IconButton className={classes.iconButton} onClick={() => this.copyAddress(name || address || '')}><FilterNoneIcon fontSize="small" /></IconButton>
-        {address?<IconButton className={classes.iconButton} href={"https://etherscan.io/address/" + address} target="_blank" rel="noopener"><OpenInNewIcon fontSize="small" /></IconButton>:''}
-      </Typography>
-    );
+    if(name) {
+      return name;
+    } else if(address) {
+      return address.slice(0, 6) + '…' + address.slice(address.length - 4);
+    } else {
+      return '?';
+    }
+  }
+
+  render() {
+    let {classes, showCopyIcon, showLaunchIcon} = this.props;
+    let {name, address} = this.state;
+    return <>
+        {this.label()}
+        {showCopyIcon?<IconButton className={classes.iconButton} onClick={() => this.copyAddress(name || address || '')}><FilterNoneIcon fontSize="small" /></IconButton>:''}
+        {address&&showLaunchIcon?<IconButton className={classes.iconButton} href={"https://etherscan.io/address/" + address} target="_blank" rel="noopener"><OpenInNewIcon fontSize="small" /></IconButton>:''}
+    </>;
   }
 };
 
