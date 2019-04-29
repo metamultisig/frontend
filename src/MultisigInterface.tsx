@@ -21,6 +21,8 @@ import MultisigWatcher from './MultisigWatcher';
 import MultisigTransactionCreator from './MultisigTransactionCreator';
 import FunctionABIEntry from './FunctionABIEntry';
 import AddressRenderer from './AddressRenderer';
+import { SigningRequest } from './BackendSchema';
+import MultisigSigningRequestRenderer from './MultisigSigningRequestRenderer';
 
 const styles = (theme: Theme) =>
   createStyles({
@@ -191,35 +193,18 @@ class MultisigInterface extends Component<Props, State> {
         </Paper>
 
         <Typography variant="h6">Signing Requests</Typography>
-        <Table className={classes.table}>
-          <TableHead>
-            <TableRow>
-              <TableCell>Destination</TableCell>
-              <TableCell>Value</TableCell>
-              <TableCell>Data</TableCell>
-              <TableCell>Nonce</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            <Query
-              query={getSigningRequests}
-              variables={{address: this.props.wallet.address}}
-            >
-              {(result: QueryResult) => {
-                if(result.loading) return <TableRow><TableCell>Loading...</TableCell></TableRow>;
-                if(result.error) return <TableRow><TableCell>Error loading signing requests.</TableCell></TableRow>;
-                return result.data.multisig.signingRequests.map((sr: any) => (
-                  <TableRow>
-                    <TableCell>{sr.destination}</TableCell>
-                    <TableCell>{ethers.utils.formatEther(sr.value)}</TableCell>
-                    <TableCell>{sr.data}</TableCell>
-                    <TableCell>{sr.nonce}</TableCell>
-                  </TableRow>
-                ));
-              }}
-            </Query>
-          </TableBody>
-        </Table>
+        <Query
+          query={getSigningRequests}
+          variables={{address: this.props.wallet.address}}
+        >
+          {(result: QueryResult) => {
+            if(result.loading) return <Paper className={classes.paper}><Typography>Loading...</Typography></Paper>;
+            if(result.error) return <Paper className={classes.paper}><Typography>Error loading signing requests.</Typography></Paper>;
+            return result.data.multisig.signingRequests.map((sr: SigningRequest) => (
+              <MultisigSigningRequestRenderer key={sr.id} provider={this.props.provider} request={sr} />
+            ));
+          }}
+        </Query>
       </>
     );
   }

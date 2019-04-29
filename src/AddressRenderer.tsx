@@ -9,8 +9,7 @@ import FilterNoneIcon from '@material-ui/icons/FilterNone';
 const styles = (theme: Theme) =>
   createStyles({
     iconButton: {
-      padding: 0,
-      paddingLeft: 8,
+      padding: 8,
       verticalAlign: 'middle',
     },
   });

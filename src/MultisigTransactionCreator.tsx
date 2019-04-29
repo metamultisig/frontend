@@ -121,20 +121,9 @@ class MultisigTransactionCreator extends Component<Props, State> {
   }
 
   onAddKeyholder = async (args: Array<FieldValue>, submit: (variables: any) => any) => {
-    this.setState({
-      showAddKeyholderDialog: false,
-    });
-
     const descriptor = this.props.contract.interface.functions['setKeyholderWeight'];
     const encoded = descriptor.encode(args);
     const nonce = (await this.props.contract.nextNonce()).toNumber();
-    // var tx = await this.props.contract.submit(
-    //   this.props.contract.address,
-    //   0,
-    //   encoded,
-    //   nonce,
-    //   []
-    // );
     const id = await this.props.contract.getTransactionHash(this.props.contract.address, 0, encoded, nonce);
     var sig = await this.props.provider.getSigner().signMessage(ethers.utils.arrayify(id));
     console.log(await submit({
@@ -149,6 +138,7 @@ class MultisigTransactionCreator extends Component<Props, State> {
       },
     }));
     this.setState({
+      showAddKeyholderDialog: false,
       lastTxId: id,
     });
   }
