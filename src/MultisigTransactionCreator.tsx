@@ -1,3 +1,5 @@
+import { gql } from "apollo-boost";
+import { Mutation } from "react-apollo";
 import { ethers } from 'ethers';
 import { BigNumber } from 'ethers/utils';
 import React, { Component } from 'react';
@@ -28,11 +30,26 @@ const styles = (theme: Theme) =>
   createStyles({
     fab: {
       margin: theme.spacing.unit,
-      position: 'absolute',
+      position: 'fixed',
       bottom: theme.spacing.unit * 2,
       right: theme.spacing.unit * 2,
     }
   });
+
+const submitSigningRequest = gql`
+  mutation SubmitSigningRequest($address: Address!, $request: NewSigningRequest!) {
+    submitSigningRequest(address: $address, request: $request) {
+      id
+      destination
+      value
+      data
+      abi
+      nonce
+      signatures
+      description
+    }
+  }
+`;
 
 interface Props extends WithStyles<typeof styles> {
   provider: ethers.providers.JsonRpcProvider;
@@ -103,12 +120,45 @@ class MultisigTransactionCreator extends Component<Props, State> {
     });
   }
 
-  onAddKeyholder = async (args: Array<FieldValue>) => {
+  onAddKeyholder = async (args: Array<FieldValue>, submit: (variables: any) => any) => {
     this.setState({
       showAddKeyholderDialog: false,
     });
 
     const descriptor = this.props.contract.interface.functions['setKeyholderWeight'];
+    const encoded = descriptor.encode(args);
+    const nonce = (await this.props.contract.nextNonce()).toNumber();
+    // var tx = await this.props.contract.submit(
+    //   this.props.contract.address,
+    //   0,
+    //   encoded,
+    //   nonce,
+    //   []
+    // );
+    const id = await this.props.contract.getTransactionHash(this.props.contract.address, 0, encoded, nonce);
+    var sig = await this.props.provider.getSigner().signMessage(ethers.utils.arrayify(id));
+    console.log(await submit({
+      variables: {
+        address: this.props.contract.address,
+        request: {
+          destination: this.props.contract.address,
+          data: encoded,
+          nonce: nonce,
+          signatures: [sig],
+        },
+      },
+    }));
+    this.setState({
+      lastTxId: id,
+    });
+  }
+
+  onSetThreshold = async (args: Array<FieldValue>) => {
+    this.setState({
+      showSetThresholdDialog: false,
+    });
+
+    const descriptor = this.props.contract.interface.functions['setThreshold'];
     const encoded = descriptor.encode(args);
     var nonce = await this.props.contract.nextNonce();
     var tx = await this.props.contract.submit(
@@ -121,9 +171,6 @@ class MultisigTransactionCreator extends Component<Props, State> {
     this.setState({
       lastTxId: tx.hash,
     });
-  }
-
-  onSetThreshold = (args: Array<FieldValue>) => {
   }
 
   closeTxSnackbar = (e: React.SyntheticEvent<any, Event>, reason: string) => {
@@ -159,10 +206,14 @@ class MultisigTransactionCreator extends Component<Props, State> {
         <Dialog open={this.state.showAddKeyholderDialog} onClose={this.onAddKeyholderClose} aria-labelledby="addkeyholder-title">
           <DialogTitle id="addkeyholder-title">Add a Keyholder</DialogTitle>
           <DialogContent>
-            <FunctionABIEntry
-              provider={this.props.provider}
-              abi={contract.interface.functions['setKeyholderWeight']}
-              onSubmit={this.onAddKeyholder} />
+            <Mutation mutation={submitSigningRequest}>
+              {(submit: (variables: any) => any) => (
+                <FunctionABIEntry
+                  provider={this.props.provider}
+                  abi={contract.interface.functions['setKeyholderWeight']}
+                  onSubmit={(args: Array<FieldValue>) => this.onAddKeyholder(args, submit)} />
+              )}
+            </Mutation>
           </DialogContent>
         </Dialog>
 

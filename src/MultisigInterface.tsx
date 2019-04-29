@@ -1,8 +1,9 @@
+import { Query, QueryResult } from 'react-apollo';
+import { gql } from 'apollo-boost';
 import { ethers } from 'ethers';
 import { BigNumber } from 'ethers/utils';
 import React, { Component } from 'react';
 import { FunctionFragment } from 'ethers/utils/abi-coder';
-import { abi as multisigABI } from '@metamultisig/contract/build/contracts/MetaMultisig.json';
 import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
 import Divider from '@material-ui/core/Divider';
 import Grid from '@material-ui/core/Grid';
@@ -14,10 +15,12 @@ import TableBody from '@material-ui/core/TableBody';
 import TableRow from '@material-ui/core/TableRow';
 import TableCell from '@material-ui/core/TableCell';
 import Typography from '@material-ui/core/Typography';
+import { abi as multisigABI } from '@metamultisig/contract/build/contracts/MetaMultisig.json';
 
 import MultisigWatcher from './MultisigWatcher';
 import MultisigTransactionCreator from './MultisigTransactionCreator';
 import FunctionABIEntry from './FunctionABIEntry';
+import AddressRenderer from './AddressRenderer';
 
 const styles = (theme: Theme) =>
   createStyles({
@@ -40,6 +43,23 @@ const styles = (theme: Theme) =>
       minwidth: 700,
     },
   });
+
+const getSigningRequests = gql`
+  query Multisig($address: Address!) {
+    multisig(address: $address) {
+      signingRequests {
+        id
+        destination
+        value
+        data
+        abi
+        nonce
+        signatures
+        description
+      }
+    }
+  }
+`;
 
 interface WalletInfo {
   title: string;
@@ -118,7 +138,7 @@ class MultisigInterface extends Component<Props, State> {
       const weights = this.state.keyholders;
       keyholders = Object.keys(weights).map((addr) => (
           <TableRow key={addr}>
-            <TableCell>{addr}</TableCell>
+            <TableCell><AddressRenderer provider={this.props.provider} value={addr} /></TableCell>
             <TableCell>{weights[addr]}</TableCell>
           </TableRow>
         )
@@ -136,11 +156,7 @@ class MultisigInterface extends Component<Props, State> {
               <Typography>Address</Typography>
             </Grid>
             <Grid item xs={6}>
-              <Typography>
-                <Link href={"https://etherscan.io/address/" + this.props.wallet.address}>
-                  {this.props.wallet.address}
-                </Link>
-              </Typography>
+              <AddressRenderer provider={this.props.provider} value={this.props.wallet.address} />
             </Grid>
 
             <Grid item xs={6}>
@@ -173,6 +189,37 @@ class MultisigInterface extends Component<Props, State> {
             </TableBody>
           </Table>
         </Paper>
+
+        <Typography variant="h6">Signing Requests</Typography>
+        <Table className={classes.table}>
+          <TableHead>
+            <TableRow>
+              <TableCell>Destination</TableCell>
+              <TableCell>Value</TableCell>
+              <TableCell>Data</TableCell>
+              <TableCell>Nonce</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            <Query
+              query={getSigningRequests}
+              variables={{address: this.props.wallet.address}}
+            >
+              {(result: QueryResult) => {
+                if(result.loading) return <TableRow><TableCell>Loading...</TableCell></TableRow>;
+                if(result.error) return <TableRow><TableCell>Error loading signing requests.</TableCell></TableRow>;
+                return result.data.multisig.signingRequests.map((sr: any) => (
+                  <TableRow>
+                    <TableCell>{sr.destination}</TableCell>
+                    <TableCell>{ethers.utils.formatEther(sr.value)}</TableCell>
+                    <TableCell>{sr.data}</TableCell>
+                    <TableCell>{sr.nonce}</TableCell>
+                  </TableRow>
+                ));
+              }}
+            </Query>
+          </TableBody>
+        </Table>
       </>
     );
   }
