@@ -24,6 +24,7 @@ import Typography from '@material-ui/core/Typography';
 
 import FunctionABIEntry from './FunctionABIEntry';
 import findFunctionDefinition from './findFunctionDefinition';
+import {ProviderContext} from './ProviderContext';
 
 const styles = (theme: Theme) =>
   createStyles({
@@ -51,7 +52,6 @@ const submitSigningRequest = gql`
 `;
 
 interface Props extends WithStyles<typeof styles> {
-  provider: ethers.providers.JsonRpcProvider;
   contract: ethers.Contract;
 }
 
@@ -65,6 +65,8 @@ interface State {
 type FieldValue = string|Uint8Array|BigNumber|undefined;
 
 class MultisigTransactionCreator extends Component<Props, State> {
+  static contextType = ProviderContext;
+
   constructor(props: Props) {
     super(props);
 
@@ -125,7 +127,7 @@ class MultisigTransactionCreator extends Component<Props, State> {
     const encoded = descriptor.encode(args);
     const nonce = (await this.props.contract.nextNonce()).toNumber();
     const id = await this.props.contract.getTransactionHash(this.props.contract.address, 0, encoded, nonce);
-    var sig = await this.props.provider.getSigner().signMessage(ethers.utils.arrayify(id));
+    var sig = await this.context.provider.getSigner().signMessage(ethers.utils.arrayify(id));
     console.log(await submit({
       variables: {
         address: this.props.contract.address,
@@ -200,7 +202,6 @@ class MultisigTransactionCreator extends Component<Props, State> {
             <Mutation mutation={submitSigningRequest}>
               {(submit: (variables: any) => any) => (
                 <FunctionABIEntry
-                  provider={this.props.provider}
                   abi={contract.interface.functions['setKeyholderWeight']}
                   onSubmit={(args: Array<FieldValue>) => this.onAddKeyholder(args, submit)} />
               )}
@@ -212,7 +213,6 @@ class MultisigTransactionCreator extends Component<Props, State> {
           <DialogTitle id="setthreshold-title">Set Signing Threshold</DialogTitle>
           <DialogContent>
             <FunctionABIEntry
-              provider={this.props.provider}
               abi={contract.interface.functions['setThreshold']}
               onSubmit={this.onSetThreshold} />
           </DialogContent>

@@ -25,6 +25,7 @@ import Snackbar from '@material-ui/core/Snackbar';
 import AddressRenderer from './AddressRenderer';
 import { SigningRequest } from './BackendSchema';
 import FunctionCallRenderer from './FunctionCallRenderer';
+import {ProviderContext} from './ProviderContext';
 
 const styles = (theme: Theme) =>
   createStyles({
@@ -38,10 +39,10 @@ export interface SigningRequestData {
   signatories: SignerMap;
   totalWeight: number;
   threshold: number;
+  ourWeight?: number;
 }
 
 interface Props extends WithStyles<typeof styles> {
-  provider: ethers.providers.JsonRpcProvider;
   multisig: ethers.Contract;
   request: SigningRequest;
   onSignature: (sig: string) => any;
@@ -58,6 +59,8 @@ interface State {
 }
 
 class TransactionSigner extends Component<Props, State> {
+  static contextType = ProviderContext;
+
   inputs?: Array<any>;
 
   constructor(props: Props) {
@@ -118,7 +121,7 @@ class TransactionSigner extends Component<Props, State> {
   }
 
   onApprove = async () => {
-    const signer = this.props.provider.getSigner();
+    const signer = this.context.provider.getSigner();
     const address = await signer.getAddress();
     const ourWeight = await this.props.multisig.keyholders(address);
     if(this.state.totalWeight + ourWeight >= this.state.threshold) {
@@ -137,8 +140,8 @@ class TransactionSigner extends Component<Props, State> {
       showSignOrSendDialog: false,
     });
 
-    const { multisig, request, provider, onSignature } = this.props;
-    const signer = provider.getSigner();
+    const { multisig, request, onSignature } = this.props;
+    const signer = this.context.provider.getSigner();
 
     const hash = await multisig.getTransactionHash(request.destination, request.value, request.data, request.nonce);
     const sig = await signer.signMessage(arrayify(hash));
@@ -152,8 +155,8 @@ class TransactionSigner extends Component<Props, State> {
 
     if(!this.state.signatories) return;
 
-    const { multisig, provider, request } = this.props;
-    const address = await provider.getSigner().getAddress();
+    const { multisig, request } = this.props;
+    const address = await this.context.provider.getSigner().getAddress();
     const sigs = Object.values(this.state.signatories)
       .filter((sig) => (sig.address !== address))
       .map((sig) => sig.signature);
@@ -164,11 +167,11 @@ class TransactionSigner extends Component<Props, State> {
   }
 
   render() {
-    const { multisig, children, provider, request, classes } = this.props;
+    const { multisig, children, request, classes } = this.props;
     const { signatories, totalWeight, threshold } = this.state;
 
 
-    const destination = <AddressRenderer provider={provider} value={request.destination} showLaunchIcon={false} showCopyIcon={false} />;
+    const destination = <AddressRenderer value={request.destination} showLaunchIcon={false} showCopyIcon={false} />;
     const value = bigNumberify(request.value || 0);
     const amount = (!value.isZero())?<> with {formatEther(value)} ether</>:'';
     let title: any = undefined;

@@ -7,12 +7,12 @@ import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
 import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
 import Typography from '@material-ui/core/Typography';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+
 import FunctionABIEntry from './FunctionABIEntry';
 
 type FieldValue = string|Uint8Array|BigNumber|undefined;
 
 interface Props {
-  provider: ethers.providers.Provider;
   interface: Interface;
   type: string;
   onSubmit?: (abi: FunctionDescription, args: Array<FieldValue>) => any;
@@ -47,7 +47,7 @@ class ABIPicker extends Component<Props, State> {
             <Typography>{func.name}</Typography>
           </ExpansionPanelSummary>
           <ExpansionPanelDetails>
-            <FunctionABIEntry provider={this.props.provider} abi={func} onSubmit={(args) => this.onSubmit(func, args)} />
+            <FunctionABIEntry abi={func} onSubmit={(args) => this.onSubmit(func, args)} />
           </ExpansionPanelDetails>
         </ExpansionPanel>
       );

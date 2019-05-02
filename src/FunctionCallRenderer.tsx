@@ -18,7 +18,6 @@ const styles = (theme: Theme) =>
   });
 
 interface Props extends WithStyles<typeof styles> {
-  provider: ethers.providers.Provider;
   abi: FunctionFragment;
   inputs: Array<any>;
 }
@@ -29,7 +28,7 @@ class FunctionCallRenderer extends Component<Props, {}> {
   }
 
   render() {
-    let {abi, inputs, provider, classes} = this.props;
+    let {abi, inputs, classes} = this.props;
 
     return (
       <List dense={true} disablePadding={true}>
@@ -43,7 +42,7 @@ class FunctionCallRenderer extends Component<Props, {}> {
               switch(param.type) {
               case 'address':
                 return (<ListItem key={idx}>
-                  <ListItemText primary={<AddressRenderer provider={provider} value={arg} />} />
+                  <ListItemText primary={<AddressRenderer value={arg} />} />
                 </ListItem>);
               default:
                 return (<ListItem key={idx}>

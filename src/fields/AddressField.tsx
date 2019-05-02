@@ -2,8 +2,9 @@ import { ethers } from 'ethers';
 import React, { Component } from 'react';
 import TextField from '@material-ui/core/TextField';
 
+import {ProviderContext} from '../ProviderContext';
+
 interface Props {
-  provider: ethers.providers.Provider;
   label: string;
   value?: string;
   onChange?: (value: string, valid: boolean, name?: string) => any;
@@ -12,6 +13,8 @@ interface Props {
 const address_re = /^0x[0-9a-fA-F]{40}$/;
 
 class AddressField extends Component<Props, {value: string, valid: boolean}> {
+  static contextType = ProviderContext;
+
   private timerId?: ReturnType<typeof setTimeout>;
 
   constructor(props : Props) {
@@ -53,7 +56,7 @@ class AddressField extends Component<Props, {value: string, valid: boolean}> {
   }
 
   async tryResolveName() {
-    const addr = await this.props.provider.resolveName(this.state.value);
+    const addr = await this.context.provider.resolveName(this.state.value);
     if(addr) {
       this.setState({
         valid: true,

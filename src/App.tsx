@@ -19,19 +19,12 @@ import MenuIcon from '@material-ui/icons/Menu';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
+
 import logo from './logo.svg';
 import './App.css';
-// import AddressField from './fields/AddressField';
-// import ABIPicker from './ABIPicker';
-// import ABIFetcher from './ABIFetcher';
 import MultisigWatcher from './MultisigWatcher';
 import MultisigInterface from './MultisigInterface';
-
-interface Ethereum extends ethers.providers.AsyncSendable {
-  enable: () => any;
-}
-
-declare var ethereum: Ethereum;
+import {ProviderContext} from './ProviderContext';
 
 const drawerWidth = 240;
 
@@ -77,8 +70,6 @@ interface WalletInfo {
 }
 
 interface State {
-  // abi: Array<EventFragment | FunctionFragment>;
-  // contractAddress: string;
   mobileOpen: boolean;
   wallets: Array<WalletInfo>|null;
   selectedWallet: WalletInfo|null;
@@ -87,42 +78,37 @@ interface State {
 interface Props extends WithStyles<typeof styles, true> {}
 
 class App extends Component<Props, State> {
-  provider: ethers.providers.JsonRpcProvider;
-  watcher: MultisigWatcher;
+  static contextType = ProviderContext;
+
+  watcher?: MultisigWatcher;
   address?: string;
-  // abiFetcher: ABIFetcher;
 
   constructor(props: Props) {
       super(props)
-      this.provider = new ethers.providers.Web3Provider(ethereum);
-      // this.abiFetcher = new ABIFetcher(this.provider);
-      // this.onAddressChange = this.onAddressChange.bind(this);
-      // this.onSubmit = this.onSubmit.bind(this);
       this.state = {
         mobileOpen: false,
         wallets: null,
         selectedWallet: null,
-        // abi: [],
-        // contractAddress: '',
       };
-      this.watcher = new MultisigWatcher(this.provider);
   }
 
   async componentDidMount() {
-    const addresses = await ethereum.enable();
-    if(addresses.length > 0) {
-      this.watcher.addOwnerWatch(addresses[0], this.onWalletListChange);
+    this.watcher = new MultisigWatcher(this.context.provider);
+
+    const address = await this.context.account();
+    if(address) {
+      this.watcher.addOwnerWatch(address, this.onWalletListChange);
     }
   }
 
   componentWillUnmount() {
-    if(this.address) {
+    if(this.address && this.watcher) {
       this.watcher.removeOwnerWatch(this.address);
     }
   }
 
   onWalletListChange = async (wallets: {[key: string]: number}) => {
-    const provider = this.provider;
+    const provider = this.context.provider;
     const walletList = await Promise.all(Object.keys(wallets).map(async (wallet) => {
       let title = await provider.lookupAddress(wallet);
       if(title == null) {
@@ -140,28 +126,6 @@ class App extends Component<Props, State> {
       selectedWallet: wallet,
     })
   }
-
-  // async onAddressChange(value: string, valid: boolean, addr: string) {
-  //   if(valid) {
-  //     const abi = await this.abiFetcher.fetch(addr, value);
-  //     this.setState({
-  //       abi: abi,
-  //       contractAddress: value,
-  //     });
-  //   } else {
-  //     this.setState({
-  //       contractAddress: value,
-  //     });
-  //   }
-  // }
-  //
-  // async onSubmit(abi: FunctionFragment, args: Array<FieldValue>) {
-  //   await ethereum.enable();
-  //   const contract = new ethers.Contract(this.state.contractAddress, this.state.abi, this.provider)
-  //     .connect(this.provider.getSigner());
-  //   const tx = await contract[abi.name](...args);
-  //   console.log(tx.hash);
-  // }
 
   handleDrawerToggle = () => {
     this.setState(state => ({ mobileOpen: !state.mobileOpen }));
@@ -220,7 +184,7 @@ class App extends Component<Props, State> {
     );
     if(this.state.selectedWallet !== null) {
       body = (
-        <MultisigInterface provider={this.provider} wallet={this.state.selectedWallet} />
+        <MultisigInterface wallet={this.state.selectedWallet} />
       );
     }
 
@@ -274,12 +238,6 @@ class App extends Component<Props, State> {
         </main>
       </div>
     );
-    // return (
-    //   <div className="App">
-    //     <AddressField label="Address" provider={this.provider} onChange={this.onAddressChange} value={this.state.contractAddress} />
-    //     <ABIPicker const={false} provider={this.provider} abi={this.state.abi} onSubmit={this.onSubmit} />
-    //   </div>
-    // );
   }
 }
 

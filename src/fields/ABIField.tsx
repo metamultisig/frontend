@@ -20,7 +20,6 @@ const styles = (theme: Theme) =>
 type FieldValue = string|Uint8Array|BigNumber|undefined;
 
 interface Props extends WithStyles<typeof styles> {
-  provider: ethers.providers.Provider;
   label: string;
   type: string;
   value?: FieldValue;
@@ -32,7 +31,7 @@ interface State {
 
 class ABIField extends Component<Props, State> {
   render() {
-    const { provider, label, type, value, onChange, classes } = this.props;
+    const { label, type, value, onChange, classes } = this.props;
     switch(type) {
     case 'bytes32':
       return <Bytes32Field label={label} onChange={onChange} value={value as string|undefined} />
@@ -41,7 +40,7 @@ class ABIField extends Component<Props, State> {
     case 'int256':
       return <IntField label={label} signed={false} onChange={onChange} value={value as BigNumber|undefined} />
     case 'address':
-      return <AddressField label={label} provider={provider} onChange={onChange} value={value as string|undefined} />
+      return <AddressField label={label} onChange={onChange} value={value as string|undefined} />
     case 'bytes':
       return <BytesField label={label} onChange={onChange} value={value as Uint8Array|undefined} />
     case 'string':

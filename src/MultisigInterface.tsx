@@ -24,6 +24,7 @@ import FunctionABIEntry from './FunctionABIEntry';
 import AddressRenderer from './AddressRenderer';
 import { SigningRequest } from './BackendSchema';
 import MultisigSigningRequests from './MultisigSigningRequests';
+import {ProviderContext} from './ProviderContext';
 
 const styles = (theme: Theme) =>
   createStyles({
@@ -71,7 +72,6 @@ interface WalletInfo {
 }
 
 interface Props extends WithStyles<typeof styles> {
-  provider: ethers.providers.JsonRpcProvider;
   wallet: WalletInfo;
 }
 
@@ -85,8 +85,10 @@ interface State {
 }
 
 class MultisigInterface extends Component<Props, State> {
-  watcher: MultisigWatcher;
-  contract: ethers.Contract;
+  static contextType = ProviderContext;
+
+  watcher?: MultisigWatcher;
+  contract?: ethers.Contract;
   apollo: ApolloClient<{}>;
 
   constructor(props: Props) {
@@ -101,13 +103,14 @@ class MultisigInterface extends Component<Props, State> {
       showSetThresholdDialog: false,
     };
 
-    this.watcher = new MultisigWatcher(this.props.provider);
-    this.contract = new ethers.Contract(this.props.wallet.address, Array.from(multisigABI), this.props.provider.getSigner());
     this.apollo = new ApolloClient({uri: "http://localhost:4000/"});
   }
 
   componentDidMount() {
-    this.props.provider.getBalance(this.props.wallet.address).then(((balance:ethers.utils.BigNumber) => {
+    this.watcher = new MultisigWatcher(this.context.provider);
+    this.contract = new ethers.Contract(this.props.wallet.address, Array.from(multisigABI), this.context.provider.getSigner());
+
+    this.context.provider.getBalance(this.props.wallet.address).then(((balance:ethers.utils.BigNumber) => {
       this.setState({
         balance: balance,
       })
@@ -127,11 +130,14 @@ class MultisigInterface extends Component<Props, State> {
   }
 
   componentWillUnmount() {
-    this.watcher.removeMultisigWatch(this.props.wallet.address);
+    if(this.watcher) {
+      this.watcher.removeMultisigWatch(this.props.wallet.address);
+    }
   }
 
   render() {
-    const { provider, wallet, classes } = this.props;
+    const { wallet, classes } = this.props;
+    const provider = this.context.provider;
 
     let keyholders = [(
       <TableRow key="loading">
@@ -143,7 +149,7 @@ class MultisigInterface extends Component<Props, State> {
       const weights = this.state.keyholders;
       keyholders = Object.keys(weights).map((addr) => (
           <TableRow key={addr}>
-            <TableCell><AddressRenderer provider={provider} value={addr} /></TableCell>
+            <TableCell><AddressRenderer value={addr} /></TableCell>
             <TableCell>{weights[addr]}</TableCell>
           </TableRow>
         )
@@ -152,7 +158,7 @@ class MultisigInterface extends Component<Props, State> {
 
     return (
       <ApolloProvider client={this.apollo}>
-        <MultisigTransactionCreator provider={provider} contract={this.contract} />
+        <MultisigTransactionCreator contract={this.contract as ethers.Contract} />
 
         <Typography variant="h6">Overview</Typography>
         <Paper className={classes.paper}>
@@ -161,7 +167,7 @@ class MultisigInterface extends Component<Props, State> {
               <Typography>Address</Typography>
             </Grid>
             <Grid item xs={6}>
-              <Typography><AddressRenderer provider={provider} value={this.props.wallet.address} /></Typography>
+              <Typography><AddressRenderer value={this.props.wallet.address} /></Typography>
             </Grid>
 
             <Grid item xs={6}>
@@ -196,7 +202,7 @@ class MultisigInterface extends Component<Props, State> {
         </Paper>
 
         <Typography variant="h6">Signing Requests</Typography>
-        <MultisigSigningRequests provider={provider} multisig={this.contract} address={this.props.wallet.address} />
+        <MultisigSigningRequests multisig={this.contract as ethers.Contract} address={this.props.wallet.address} />
       </ApolloProvider>
     );
   }

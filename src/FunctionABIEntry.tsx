@@ -18,7 +18,6 @@ const styles = (theme: Theme) =>
   });
 
 interface Props extends WithStyles<typeof styles> {
-  provider: ethers.providers.Provider;
   abi: FunctionDescription;
   onSubmit?: (args: Array<FieldValue>) => any;
 }
@@ -55,9 +54,9 @@ class FunctionABIEntry extends Component<Props, State> {
   }
 
   render() {
-    const { abi, classes, provider } = this.props;
+    const { abi, classes } = this.props;
     const inputs = abi.inputs.map((input, idx) => {
-      return <ABIField provider={provider} key={input.name} label={input.name as string} type={input.type as string} value={this.state.fields[idx].value} onChange={(value, valid) => this.onChange(idx, value, valid)} />
+      return <ABIField key={input.name} label={input.name as string} type={input.type as string} value={this.state.fields[idx].value} onChange={(value, valid) => this.onChange(idx, value, valid)} />
     });
     return <div>
       {inputs}

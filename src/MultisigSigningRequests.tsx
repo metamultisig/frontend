@@ -49,7 +49,6 @@ interface Variables {
 }
 
 interface Props extends WithStyles<typeof styles> {
-  provider: ethers.providers.JsonRpcProvider;
   multisig: ethers.Contract;
   address: string;
 }
@@ -74,7 +73,7 @@ class MultisigSigningRequests extends Component<Props, {}> {
             return result.data.multisig.signingRequests.map((sr: SigningRequest) => {
               return (
                 <Grid item xs={6} key={sr.id}>
-                  <MultisigSigningRequestCard key={sr.id} provider={this.props.provider} multisig={multisig} request={sr} />
+                  <MultisigSigningRequestCard key={sr.id} multisig={multisig} request={sr} />
                 </Grid>
               );
             });

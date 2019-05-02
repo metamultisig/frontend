@@ -38,7 +38,6 @@ const styles = (theme: Theme) =>
   });
 
 interface Props extends WithStyles<typeof styles> {
-  provider: ethers.providers.JsonRpcProvider;
   multisig: ethers.Contract;
   request: SigningRequest;
 }
@@ -56,11 +55,10 @@ class MultisigSigningRequestCard extends Component<Props, State> {
   }
 
   render() {
-    let {request, multisig, provider, classes} = this.props;
+    let {request, multisig, classes} = this.props;
 
     return (
       <TransactionSigner
-        provider={provider}
         multisig={multisig}
         request={request}
         onSignature={this.onSign}
@@ -78,7 +76,7 @@ class MultisigSigningRequestCard extends Component<Props, State> {
                   <TableRow>
                     <TableCell>Destination</TableCell>
                     <TableCell>
-                      <AddressRenderer provider={provider} value={request.destination} />
+                      <AddressRenderer value={request.destination} />
                     </TableCell>
                   </TableRow>
                   <TableRow>
@@ -93,7 +91,7 @@ class MultisigSigningRequestCard extends Component<Props, State> {
                     <TableRow>
                       <TableCell>Data</TableCell>
                       <TableCell>
-                        <FunctionCallRenderer provider={provider} abi={request.abi} inputs={inputs} />
+                        <FunctionCallRenderer abi={request.abi} inputs={inputs} />
                       </TableCell>
                     </TableRow>
                   </>:''}

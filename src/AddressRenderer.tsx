@@ -5,6 +5,8 @@ import IconButton from '@material-ui/core/IconButton';
 import OpenInNewIcon from '@material-ui/icons/OpenInNew';
 import FilterNoneIcon from '@material-ui/icons/FilterNone';
 
+import {ProviderContext} from './ProviderContext';
+
 const styles = (theme: Theme) =>
   createStyles({
     iconButton: {
@@ -14,7 +16,6 @@ const styles = (theme: Theme) =>
   });
 
 interface Props extends WithStyles<typeof styles> {
-  provider: ethers.providers.Provider;
   value: string;
   showCopyIcon?: boolean;
   showLaunchIcon?: boolean;
@@ -26,25 +27,33 @@ interface State {
 }
 
 class AddressRenderer extends Component<Props, State> {
+  static contextType = ProviderContext;
+
   constructor(props : Props) {
     super(props);
+
     if(!props.value.startsWith('0x') && props.value.includes('.')) {
       this.state = {
         name: props.value,
       }
-      props.provider.resolveName(props.value).then((address) => {
-        this.setState({
-          address: address,
-        });
-      });
     } else {
       this.state = {
         address: props.value,
       }
-      props.provider.lookupAddress(props.value).then((name) => {
-        this.setState({
-          name: name,
-        });
+    }
+  }
+
+  async componentDidMount() {
+    const { value } = this.props;
+    if(!value.startsWith('0x') && value.includes('.')) {
+      const address = await this.context.provider.resolveName(value);
+      this.setState({
+        address: address,
+      });
+    } else {
+      const name = await this.context.provider.lookupAddress(value);
+      this.setState({
+        name: name,
       });
     }
   }
