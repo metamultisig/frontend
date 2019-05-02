@@ -39,7 +39,7 @@ export interface SigningRequestData {
   signatories: SignerMap;
   totalWeight: number;
   threshold: number;
-  ourWeight?: number;
+  ourWeight: number;
 }
 
 interface Props extends WithStyles<typeof styles> {
@@ -53,6 +53,7 @@ interface State {
   signatories?: SignerMap;
   totalWeight: number;
   threshold: number;
+  ourWeight: number;
   showConfirmationDialog: boolean;
   showSignOrSendDialog: boolean;
   lastTxId?: string;
@@ -70,6 +71,7 @@ class TransactionSigner extends Component<Props, State> {
       signatories: undefined,
       totalWeight: 0,
       threshold: 0,
+      ourWeight: 0,
       showConfirmationDialog: false,
       showSignOrSendDialog: false,
     };
@@ -83,34 +85,36 @@ class TransactionSigner extends Component<Props, State> {
     }
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     const hash = arrayify(this.props.request.id);
-    Promise.all(this.props.request.signatures.map(async (sig) => {
+    const sigs = await Promise.all(this.props.request.signatures.map(async (sig) => {
       const address = verifyMessage(hash, sig);
       const weight = await this.props.multisig.keyholders(address);
       if(!weight.isZero()) {
         return {signature: sig, weight: weight.toNumber(), address: address};
       }
-    })).then((sigs) => {
-      const signatories = Object.assign(this.state.signatories || {});
-      let totalWeight = 0;
-      for(let sig of sigs) {
-        if(sig !== undefined) {
-          signatories[sig.address] = sig;
-          totalWeight += sig.weight;
-        }
-      }
-      this.setState({
-        signatories: signatories,
-        totalWeight: totalWeight,
-      })
-    });
+    }));
 
-    this.props.multisig.threshold().then((weight: BigNumber) => {
-      this.setState({
-        threshold: weight.toNumber(),
-      });
-    });
+    const signatories = Object.assign(this.state.signatories || {});
+    let totalWeight = 0;
+    for(let sig of sigs) {
+      if(sig !== undefined) {
+        signatories[sig.address] = sig;
+        totalWeight += sig.weight;
+      }
+    }
+
+    const threshold = await this.props.multisig.threshold();
+
+    const account = await this.context.account();
+    const ourWeight = await this.props.multisig.keyholders(account);
+
+    this.setState({
+      signatories: signatories,
+      totalWeight: totalWeight,
+      threshold: threshold.toNumber(),
+      ourWeight: ourWeight.toNumber(),
+    })
   }
 
 
@@ -168,7 +172,7 @@ class TransactionSigner extends Component<Props, State> {
 
   render() {
     const { multisig, children, request, classes } = this.props;
-    const { signatories, totalWeight, threshold } = this.state;
+    const { signatories, totalWeight, threshold, ourWeight } = this.state;
 
 
     const destination = <AddressRenderer value={request.destination} showLaunchIcon={false} showCopyIcon={false} />;
@@ -225,7 +229,7 @@ class TransactionSigner extends Component<Props, State> {
             {this.state.lastTxId && (this.state.lastTxId.slice(0, 6) + '…' + this.state.lastTxId.slice(60))}
           </Link> sent</span>}
         />
-        {children(this.sign, this.publish, title, (signatories&&threshold)?{signatories, totalWeight, threshold}:undefined, this.inputs)}
+        {children(this.sign, this.publish, title, (signatories&&threshold)?{signatories, totalWeight, threshold, ourWeight}:undefined, this.inputs)}
       </>
     );
   }

@@ -88,7 +88,6 @@ class MultisigInterface extends Component<Props, State> {
   static contextType = ProviderContext;
 
   watcher?: MultisigWatcher;
-  contract?: ethers.Contract;
   apollo: ApolloClient<{}>;
 
   constructor(props: Props) {
@@ -108,7 +107,7 @@ class MultisigInterface extends Component<Props, State> {
 
   componentDidMount() {
     this.watcher = new MultisigWatcher(this.context.provider);
-    this.contract = new ethers.Contract(this.props.wallet.address, Array.from(multisigABI), this.context.provider.getSigner());
+    const contract = new ethers.Contract(this.props.wallet.address, Array.from(multisigABI), this.context.provider);
 
     this.context.provider.getBalance(this.props.wallet.address).then(((balance:ethers.utils.BigNumber) => {
       this.setState({
@@ -122,7 +121,7 @@ class MultisigInterface extends Component<Props, State> {
       })
     }));
 
-    this.contract.threshold().then((threshold:ethers.utils.BigNumber) => {
+    contract.threshold().then((threshold:ethers.utils.BigNumber) => {
       this.setState({
         threshold: threshold.toNumber(),
       });
@@ -138,6 +137,7 @@ class MultisigInterface extends Component<Props, State> {
   render() {
     const { wallet, classes } = this.props;
     const provider = this.context.provider;
+    const contract = new ethers.Contract(wallet.address, Array.from(multisigABI), provider.getSigner());
 
     let keyholders = [(
       <TableRow key="loading">
@@ -158,7 +158,7 @@ class MultisigInterface extends Component<Props, State> {
 
     return (
       <ApolloProvider client={this.apollo}>
-        <MultisigTransactionCreator contract={this.contract as ethers.Contract} />
+        <MultisigTransactionCreator contract={contract} />
 
         <Typography variant="h6">Overview</Typography>
         <Paper className={classes.paper}>
@@ -202,7 +202,7 @@ class MultisigInterface extends Component<Props, State> {
         </Paper>
 
         <Typography variant="h6">Signing Requests</Typography>
-        <MultisigSigningRequests multisig={this.contract as ethers.Contract} address={this.props.wallet.address} />
+        <MultisigSigningRequests multisig={contract} address={this.props.wallet.address} />
       </ApolloProvider>
     );
   }
