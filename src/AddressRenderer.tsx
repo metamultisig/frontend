@@ -74,8 +74,8 @@ class AddressRenderer extends Component<Props, State> {
     let {name, address} = this.state;
     return <>
         {this.label()}
-        {showCopyIcon?<IconButton className={classes.iconButton} onClick={() => this.copyAddress(name || address || '')}><FilterNoneIcon fontSize="small" /></IconButton>:''}
-        {address&&showLaunchIcon?<IconButton className={classes.iconButton} href={"https://etherscan.io/address/" + address} target="_blank" rel="noopener"><OpenInNewIcon fontSize="small" /></IconButton>:''}
+        {showCopyIcon!==false?<IconButton className={classes.iconButton} onClick={() => this.copyAddress(name || address || '')}><FilterNoneIcon fontSize="small" /></IconButton>:''}
+        {address&&showLaunchIcon!==false?<IconButton className={classes.iconButton} href={"https://etherscan.io/address/" + address} target="_blank" rel="noopener"><OpenInNewIcon fontSize="small" /></IconButton>:''}
     </>;
   }
 };

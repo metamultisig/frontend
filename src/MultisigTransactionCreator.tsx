@@ -4,7 +4,6 @@ import { ethers } from 'ethers';
 import { BigNumber } from 'ethers/utils';
 import React, { Component } from 'react';
 import { FunctionFragment } from 'ethers/utils/abi-coder';
-import { abi as multisigABI } from '@metamultisig/contract/build/contracts/MetaMultisig.json';
 import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
 import AddIcon from '@material-ui/icons/Add';
 import PersonAddIcon from '@material-ui/icons/PersonAdd';
@@ -23,7 +22,6 @@ import ListItemText from '@material-ui/core/ListItemText';
 import Snackbar from '@material-ui/core/Snackbar';
 import Typography from '@material-ui/core/Typography';
 
-import MultisigWatcher from './MultisigWatcher';
 import FunctionABIEntry from './FunctionABIEntry';
 import findFunctionDefinition from './findFunctionDefinition';
 

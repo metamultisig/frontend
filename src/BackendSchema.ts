@@ -3,7 +3,7 @@ import { BigNumber, EventFragment, FunctionFragment } from 'ethers/utils';
 export interface SigningRequest {
   id: string;
   destination: string;
-  value?: BigNumber;
+  value?: string;
   data?: string;
   abi?: FunctionFragment;
   nonce: number;

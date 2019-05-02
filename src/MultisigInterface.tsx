@@ -128,7 +128,7 @@ class MultisigInterface extends Component<Props, State> {
   }
 
   render() {
-    const { classes, wallet } = this.props;
+    const { provider, wallet, classes } = this.props;
 
     let keyholders = [(
       <TableRow key="loading">
@@ -140,7 +140,7 @@ class MultisigInterface extends Component<Props, State> {
       const weights = this.state.keyholders;
       keyholders = Object.keys(weights).map((addr) => (
           <TableRow key={addr}>
-            <TableCell><AddressRenderer provider={this.props.provider} value={addr} /></TableCell>
+            <TableCell><AddressRenderer provider={provider} value={addr} /></TableCell>
             <TableCell>{weights[addr]}</TableCell>
           </TableRow>
         )
@@ -149,7 +149,7 @@ class MultisigInterface extends Component<Props, State> {
 
     return (
       <>
-        <MultisigTransactionCreator provider={this.props.provider} contract={this.contract} />
+        <MultisigTransactionCreator provider={provider} contract={this.contract} />
 
         <Typography variant="h6">Overview</Typography>
         <Paper className={classes.paper}>
@@ -158,7 +158,7 @@ class MultisigInterface extends Component<Props, State> {
               <Typography>Address</Typography>
             </Grid>
             <Grid item xs={6}>
-              <AddressRenderer provider={this.props.provider} value={this.props.wallet.address} />
+              <Typography><AddressRenderer provider={provider} value={this.props.wallet.address} /></Typography>
             </Grid>
 
             <Grid item xs={6}>
@@ -193,7 +193,7 @@ class MultisigInterface extends Component<Props, State> {
         </Paper>
 
         <Typography variant="h6">Signing Requests</Typography>
-        <MultisigSigningRequests provider={this.props.provider} address={this.props.wallet.address} />
+        <MultisigSigningRequests provider={provider} multisig={this.contract} address={this.props.wallet.address} />
       </>
     );
   }

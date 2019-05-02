@@ -10,7 +10,7 @@ import Paper from '@material-ui/core/Paper';
 import Typography from '@material-ui/core/Typography';
 
 import { SigningRequest } from './BackendSchema';
-import MultisigSigningRequestRenderer from './MultisigSigningRequestRenderer';
+import MultisigSigningRequestCard from './MultisigSigningRequestCard';
 
 const styles = (theme: Theme) =>
   createStyles({
@@ -50,6 +50,7 @@ interface Variables {
 
 interface Props extends WithStyles<typeof styles> {
   provider: ethers.providers.JsonRpcProvider;
+  multisig: ethers.Contract;
   address: string;
 }
 
@@ -59,7 +60,7 @@ class MultisigSigningRequests extends Component<Props, {}> {
   }
 
   render() {
-    const { address, classes } = this.props;
+    const { address, multisig, classes } = this.props;
 
     return (
       <Grid container spacing={24}>
@@ -70,11 +71,13 @@ class MultisigSigningRequests extends Component<Props, {}> {
           {(result) => {
             if(result.loading) return <Paper className={classes.paper}><Typography>Loading...</Typography></Paper>;
             if(result.error || !result.data) return <Paper className={classes.paper}><Typography>Error loading signing requests.</Typography></Paper>;
-            return result.data.multisig.signingRequests.map((sr: SigningRequest) => (
-              <Grid item xs={6}>
-                <MultisigSigningRequestRenderer key={sr.id} provider={this.props.provider} request={sr} />
-              </Grid>
-            ));
+            return result.data.multisig.signingRequests.map((sr: SigningRequest) => {
+              return (
+                <Grid item xs={6} key={sr.id}>
+                  <MultisigSigningRequestCard key={sr.id} provider={this.props.provider} multisig={multisig} request={sr} />
+                </Grid>
+              );
+            });
           }}
         </Query>
       </Grid>

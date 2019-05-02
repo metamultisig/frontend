@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { FunctionFragment, defaultAbiCoder } from 'ethers/utils';
+import { FunctionFragment } from 'ethers/utils';
 import React, { Component } from 'react';
 import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
 import Typography from '@material-ui/core/Typography';
@@ -19,8 +19,8 @@ const styles = (theme: Theme) =>
 
 interface Props extends WithStyles<typeof styles> {
   provider: ethers.providers.Provider;
-  abi?: FunctionFragment;
-  data: string;
+  abi: FunctionFragment;
+  inputs: Array<any>;
 }
 
 class FunctionCallRenderer extends Component<Props, {}> {
@@ -29,13 +29,7 @@ class FunctionCallRenderer extends Component<Props, {}> {
   }
 
   render() {
-    let {abi, data, provider, classes} = this.props;
-    if(!abi) {
-      return <Typography>Could not decode data: No ABI provided.</Typography>;
-    }
-
-    const parsed = defaultAbiCoder.decode(abi.inputs, '0x' + data.slice(10));
-    console.log(parsed);
+    let {abi, inputs, provider, classes} = this.props;
 
     return (
       <List dense={true} disablePadding={true}>
@@ -44,8 +38,8 @@ class FunctionCallRenderer extends Component<Props, {}> {
         </ListItem>
         <ListItem className={classes.topListItem}>
           <List dense={true} disablePadding={true}>
-            {parsed.map((arg:any, idx:number) => {
-              const param = (abi as FunctionFragment).inputs[idx];
+            {inputs.map((arg:any, idx:number) => {
+              const param = (abi).inputs[idx];
               switch(param.type) {
               case 'address':
                 return (<ListItem key={idx}>
