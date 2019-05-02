@@ -1,4 +1,5 @@
-import { Query, QueryResult } from 'react-apollo';
+import ApolloClient from 'apollo-boost';
+import { ApolloProvider, Query, QueryResult } from 'react-apollo';
 import { gql } from 'apollo-boost';
 import { ethers } from 'ethers';
 import { BigNumber } from 'ethers/utils';
@@ -86,6 +87,7 @@ interface State {
 class MultisigInterface extends Component<Props, State> {
   watcher: MultisigWatcher;
   contract: ethers.Contract;
+  apollo: ApolloClient<{}>;
 
   constructor(props: Props) {
     super(props);
@@ -101,6 +103,7 @@ class MultisigInterface extends Component<Props, State> {
 
     this.watcher = new MultisigWatcher(this.props.provider);
     this.contract = new ethers.Contract(this.props.wallet.address, Array.from(multisigABI), this.props.provider.getSigner());
+    this.apollo = new ApolloClient({uri: "http://localhost:4000/"});
   }
 
   componentDidMount() {
@@ -148,7 +151,7 @@ class MultisigInterface extends Component<Props, State> {
     }
 
     return (
-      <>
+      <ApolloProvider client={this.apollo}>
         <MultisigTransactionCreator provider={provider} contract={this.contract} />
 
         <Typography variant="h6">Overview</Typography>
@@ -194,7 +197,7 @@ class MultisigInterface extends Component<Props, State> {
 
         <Typography variant="h6">Signing Requests</Typography>
         <MultisigSigningRequests provider={provider} multisig={this.contract} address={this.props.wallet.address} />
-      </>
+      </ApolloProvider>
     );
   }
 };

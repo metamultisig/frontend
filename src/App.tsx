@@ -1,5 +1,3 @@
-import ApolloClient from 'apollo-boost';
-import { ApolloProvider } from 'react-apollo';
 import { ethers } from 'ethers';
 import { BigNumber } from 'ethers/utils';
 import { EventFragment, FunctionFragment } from 'ethers/utils/abi-coder';
@@ -92,7 +90,6 @@ class App extends Component<Props, State> {
   provider: ethers.providers.JsonRpcProvider;
   watcher: MultisigWatcher;
   address?: string;
-  apollo: ApolloClient<{}>;
   // abiFetcher: ABIFetcher;
 
   constructor(props: Props) {
@@ -109,7 +106,6 @@ class App extends Component<Props, State> {
         // contractAddress: '',
       };
       this.watcher = new MultisigWatcher(this.provider);
-      this.apollo = new ApolloClient({uri: "http://localhost:4000/"});
   }
 
   async componentDidMount() {
@@ -229,56 +225,54 @@ class App extends Component<Props, State> {
     }
 
     return (
-      <ApolloProvider client={this.apollo}>
-        <div className={classes.root}>
-          <CssBaseline />
-          <AppBar position="fixed" className={classes.appBar}>
-            <Toolbar>
-              <IconButton
-                color="inherit"
-                aria-label="Open drawer"
-                onClick={this.handleDrawerToggle}
-                className={classes.menuButton}
-              >
-                <MenuIcon />
-              </IconButton>
-              <Typography variant="h6" color="inherit" noWrap>
-                {this.state.selectedWallet == null ? "Meta Multisig" : "Multisig " + this.state.selectedWallet.title}
-              </Typography>
-            </Toolbar>
-          </AppBar>
-          <nav className={classes.drawer}>
-            <Hidden smUp implementation="css">
-              <Drawer
-                variant="temporary"
-                anchor={theme.direction === 'rtl' ? 'right' : 'left'}
-                open={this.state.mobileOpen}
-                onClose={this.handleDrawerToggle}
-                classes={{
-                  paper: classes.drawerPaper,
-                }}
-              >
-                {drawer}
-              </Drawer>
-            </Hidden>
-            <Hidden xsDown implementation="css">
-              <Drawer
-                classes={{
-                  paper: classes.drawerPaper,
-                }}
-                variant="permanent"
-                open
-              >
-                {drawer}
-              </Drawer>
-            </Hidden>
-          </nav>
-          <main className={classes.content}>
-            <div className={classes.toolbar} />
-            {body}
-          </main>
-        </div>
-      </ApolloProvider>
+      <div className={classes.root}>
+        <CssBaseline />
+        <AppBar position="fixed" className={classes.appBar}>
+          <Toolbar>
+            <IconButton
+              color="inherit"
+              aria-label="Open drawer"
+              onClick={this.handleDrawerToggle}
+              className={classes.menuButton}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Typography variant="h6" color="inherit" noWrap>
+              {this.state.selectedWallet == null ? "Meta Multisig" : "Multisig " + this.state.selectedWallet.title}
+            </Typography>
+          </Toolbar>
+        </AppBar>
+        <nav className={classes.drawer}>
+          <Hidden smUp implementation="css">
+            <Drawer
+              variant="temporary"
+              anchor={theme.direction === 'rtl' ? 'right' : 'left'}
+              open={this.state.mobileOpen}
+              onClose={this.handleDrawerToggle}
+              classes={{
+                paper: classes.drawerPaper,
+              }}
+            >
+              {drawer}
+            </Drawer>
+          </Hidden>
+          <Hidden xsDown implementation="css">
+            <Drawer
+              classes={{
+                paper: classes.drawerPaper,
+              }}
+              variant="permanent"
+              open
+            >
+              {drawer}
+            </Drawer>
+          </Hidden>
+        </nav>
+        <main className={classes.content}>
+          <div className={classes.toolbar} />
+          {body}
+        </main>
+      </div>
     );
     // return (
     //   <div className="App">
