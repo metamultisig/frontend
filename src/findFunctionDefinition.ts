@@ -1,11 +1,11 @@
 import { ethers } from 'ethers';
 import { EventFragment, FunctionFragment, formatSignature, id } from 'ethers/utils';
 
-function isFunctionFragment(arg: EventFragment|FunctionFragment): arg is FunctionFragment {
+export function isFunctionFragment(arg: EventFragment|FunctionFragment): arg is FunctionFragment {
   return arg.type === 'function';
 }
 
-function findFunctionDefinition(abi: Array<EventFragment|FunctionFragment>, sighash: string) {
+export function findFunctionDefinition(abi: Array<EventFragment|FunctionFragment>, sighash: string) {
   for(let fragment of abi) {
     if(!isFunctionFragment(fragment)) {
       continue;

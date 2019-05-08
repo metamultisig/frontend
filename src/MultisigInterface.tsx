@@ -158,7 +158,7 @@ class MultisigInterface extends Component<Props, State> {
 
     return (
       <ApolloProvider client={this.apollo}>
-        <MultisigTransactionCreator contract={contract} />
+        <MultisigTransactionCreator multisig={contract} />
 
         <Typography variant="h6">Overview</Typography>
         <Paper className={classes.paper}>
@@ -202,7 +202,7 @@ class MultisigInterface extends Component<Props, State> {
         </Paper>
 
         <Typography variant="h6">Signing Requests</Typography>
-        <MultisigSigningRequests multisig={contract} address={this.props.wallet.address} />
+        <MultisigSigningRequests multisig={contract} />
       </ApolloProvider>
     );
   }

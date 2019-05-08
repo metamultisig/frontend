@@ -1,5 +1,5 @@
-import { Query, QueryResult } from 'react-apollo';
-import { gql } from 'apollo-boost';
+import { compose, graphql, ChildDataProps } from 'react-apollo';
+import { ApolloError, gql } from 'apollo-boost';
 import { ethers } from 'ethers';
 import { BigNumber } from 'ethers/utils';
 import React, { Component } from 'react';
@@ -21,7 +21,7 @@ const styles = (theme: Theme) =>
     },
   });
 
-const getSigningRequests = gql`
+const GET_SIGNING_REQUESTS_QUERY = gql`
   query Multisig($address: Address!) {
     multisig(address: $address) {
       signingRequests {
@@ -38,50 +38,67 @@ const getSigningRequests = gql`
   }
 `;
 
-interface Data {
+interface Response {
   multisig: {
-    signingRequests: Array<SigningRequest>
-  },
+    signingRequests: Array<{
+      id?: string,
+      destination: string,
+      value: string,
+      data: string,
+      abi: FunctionFragment,
+      nonce: number,
+      signatures: Array<string>,
+      description?: string,
+    }>
+  };
 }
 
 interface Variables {
-  address: string,
-}
-
-interface Props extends WithStyles<typeof styles> {
-  multisig: ethers.Contract;
   address: string;
 }
 
-class MultisigSigningRequests extends Component<Props, {}> {
-  constructor(props: Props) {
-    super(props);
-  }
+interface InputProps extends WithStyles<typeof styles> {
+  multisig: ethers.Contract;
+}
 
+interface ChildProps extends WithStyles<typeof styles> {
+  multisig: ethers.Contract
+  signingRequests?: Array<SigningRequest>;
+  loading: boolean;
+  error?: ApolloError;
+}
+
+const withSigningRequests = graphql<InputProps, Response, Variables, ChildProps>(GET_SIGNING_REQUESTS_QUERY, {
+  options: ({ multisig }) => ({
+    variables: { address: multisig.address },
+  }),
+  props: ({ data, ownProps: { multisig, classes } }) => ({
+    multisig: multisig,
+    classes: classes,
+    loading: (!data || !data.loading)?false:data.loading,
+    error: (!data)?undefined:data.error,
+    signingRequests: (data === undefined || data.multisig === undefined)?undefined:data.multisig.signingRequests.map((request) => new SigningRequest(request)),
+  }),
+});
+
+class MultisigSigningRequests extends Component<ChildProps, {}> {
   render() {
-    const { address, multisig, classes } = this.props;
+    const { multisig, signingRequests, loading, error, classes } = this.props;
+    if(loading) return <Paper className={classes.paper}><Typography>Loading...</Typography></Paper>;
+    if(error || !signingRequests) return <Paper className={classes.paper}><Typography>Error loading signing requests</Typography></Paper>;
 
     return (
       <Grid container spacing={24}>
-        <Query<Data, Variables>
-          query={getSigningRequests}
-          variables={{address: this.props.address}}
-        >
-          {(result) => {
-            if(result.loading) return <Paper className={classes.paper}><Typography>Loading...</Typography></Paper>;
-            if(result.error || !result.data) return <Paper className={classes.paper}><Typography>Error loading signing requests.</Typography></Paper>;
-            return result.data.multisig.signingRequests.map((sr: SigningRequest) => {
-              return (
-                <Grid item xs={6} key={sr.id}>
-                  <MultisigSigningRequestCard key={sr.id} multisig={multisig} request={sr} />
-                </Grid>
-              );
-            });
-          }}
-        </Query>
+        {signingRequests.map((sr: SigningRequest) => {
+          return (
+            <Grid item xs={6} key={sr.id}>
+              <MultisigSigningRequestCard key={sr.id} multisig={multisig} request={sr} />
+            </Grid>
+          );
+        })}
       </Grid>
     );
   }
 };
 
-export default withStyles(styles)(MultisigSigningRequests);
+export default compose(withSigningRequests, withStyles(styles))(MultisigSigningRequests);

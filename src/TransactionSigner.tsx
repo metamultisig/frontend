@@ -11,7 +11,7 @@ import {
   id,
   verifyMessage,
 } from 'ethers/utils';
-import React, { Component } from 'react';
+import React, { Component, ReactNode } from 'react';
 import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
 import Dialog from '@material-ui/core/Dialog';
@@ -46,7 +46,7 @@ interface Props extends WithStyles<typeof styles> {
   multisig: ethers.Contract;
   request: SigningRequest;
   onSignature: (sig: string) => any;
-  children(sign: () => any, publish: () => any, title: string, data?: SigningRequestData, inputs?: Array<any>): JSX.Element;
+  children(sign: () => any, publish: () => any, title: ReactNode, data?: SigningRequestData, inputs?: Array<any>): JSX.Element;
 }
 
 interface State {
@@ -86,10 +86,11 @@ class TransactionSigner extends Component<Props, State> {
   }
 
   async componentDidMount() {
-    const hash = arrayify(this.props.request.id);
-    const sigs = await Promise.all(this.props.request.signatures.map(async (sig) => {
+    const { request, multisig } = this.props;
+    const hash = await multisig.getTransactionHash(request.destination, request.value || 0, request.data, request.nonce);
+    const sigs = await Promise.all(request.signatures.map(async (sig) => {
       const address = verifyMessage(hash, sig);
-      const weight = await this.props.multisig.keyholders(address);
+      const weight = await multisig.keyholders(address);
       if(!weight.isZero()) {
         return {signature: sig, weight: weight.toNumber(), address: address};
       }
@@ -147,7 +148,7 @@ class TransactionSigner extends Component<Props, State> {
     const { multisig, request, onSignature } = this.props;
     const signer = this.context.provider.getSigner();
 
-    const hash = await multisig.getTransactionHash(request.destination, request.value, request.data, request.nonce);
+    const hash = await multisig.getTransactionHash(request.destination, request.value || 0, request.data, request.nonce);
     const sig = await signer.signMessage(arrayify(hash));
     onSignature(sig);
   }
@@ -174,27 +175,12 @@ class TransactionSigner extends Component<Props, State> {
     const { multisig, children, request, classes } = this.props;
     const { signatories, totalWeight, threshold, ourWeight } = this.state;
 
-
-    const destination = <AddressRenderer value={request.destination} showLaunchIcon={false} showCopyIcon={false} />;
-    const value = bigNumberify(request.value || 0);
-    const amount = (!value.isZero())?<> with {formatEther(value)} ether</>:'';
-    let title: any = undefined;
-    if(this.inputs && request.abi) {
-      title = <>Call {request.abi.name} on {destination}{amount}</>;
-    } else if(request.data) {
-      title = <>Call an unknown function on {destination}{amount}</>;
-    } else if(!value.isZero()) {
-      title = <>Send {formatEther(value)} ether to {destination}</>;
-    } else {
-      title = <>Call {destination}</>;
-    }
-
     return (
       <>
         <Dialog open={this.state.showConfirmationDialog} onClose={() => this.setState({showConfirmationDialog: false})} aria-labelledby="confirmation-title" aria-describedby="confirmation-description">
           <DialogTitle id="confirmation-title">Sign Transaction?</DialogTitle>
           <DialogContent>
-            <DialogContentText id="confirmation-text">{title}</DialogContentText>
+            <DialogContentText id="confirmation-text">{request.title()}</DialogContentText>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => this.setState({showConfirmationDialog: false})} color="primary">Cancel</Button>
@@ -229,7 +215,7 @@ class TransactionSigner extends Component<Props, State> {
             {this.state.lastTxId && (this.state.lastTxId.slice(0, 6) + '…' + this.state.lastTxId.slice(60))}
           </Link> sent</span>}
         />
-        {children(this.sign, this.publish, title, (signatories&&threshold)?{signatories, totalWeight, threshold, ourWeight}:undefined, this.inputs)}
+        {children(this.sign, this.publish, request.title(), (signatories&&threshold)?{signatories, totalWeight, threshold, ourWeight}:undefined, this.inputs)}
       </>
     );
   }
