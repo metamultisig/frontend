@@ -1,4 +1,6 @@
+import { ethers } from 'ethers';
 import {
+  arrayify,
   bigNumberify,
   BigNumber,
   BigNumberish,
@@ -7,12 +9,37 @@ import {
   formatEther,
   FunctionFragment,
   formatSignature,
-  id
+  id,
+  verifyMessage
 } from 'ethers/utils';
 import React, { ReactNode } from 'react';
 import AddressRenderer from './AddressRenderer';
+import { abi as multisigABI } from '@metamultisig/contract/build/contracts/MetaMultisig.json';
+
+export interface SignerMap {
+  [key: string]: {signature: string, weight: number, address: string}
+}
+
+export interface SigningRequestStatus {
+  signatories: SignerMap;
+  totalWeight: number;
+  threshold: number;
+}
+
+export interface RequestData {
+  id?: string;
+  destination: string;
+  value?: BigNumberish;
+  data?: string;
+  inputs?: Array<any>;
+  abi?: FunctionFragment;
+  nonce: number;
+  signatures: Array<string>;
+  description?: string;
+}
 
 export class SigningRequest {
+  multisigAddress: string;
   id?: string;
   destination: string;
   value: BigNumber;
@@ -22,13 +49,16 @@ export class SigningRequest {
   signatures: Array<string>;
   description?: string;
 
-  constructor(args: {id?: string, destination: string, value?: BigNumberish, data?: string, inputs?: Array<any>, abi?: FunctionFragment, nonce: number, signatures: Array<string>, description?: string}) {
+  private status?: SigningRequestStatus;
+
+  constructor(multisigAddress: string, args: RequestData) {
     if(args.data && args.inputs) {
       throw new Error("Cannot provide both args and inputs");
     } else if(args.inputs && !args.abi) {
       throw new Error("Can only provide inputs if ABI is also provided");
     }
 
+    this.multisigAddress = multisigAddress;
     this.id = args.id;
     this.destination = args.destination;
     this.value = args.value?bigNumberify(args.value):bigNumberify(0);
@@ -71,5 +101,35 @@ export class SigningRequest {
     } else {
       return <>Call {destination}</>;
     }
+  }
+
+  getStatus = async (provider: ethers.providers.JsonRpcProvider): Promise<SigningRequestStatus> => {
+    if(this.status) return this.status;
+
+    const multisig = new ethers.Contract(this.multisigAddress, Array.from(multisigABI), provider);
+
+    const hash = arrayify(await multisig.getTransactionHash(this.destination, this.value, this.data, this.nonce));
+    const sigs = await Promise.all(this.signatures.map(async (sig) => {
+      const address = verifyMessage(hash, sig);
+      const weight = await multisig.keyholders(address);
+      //if(!weight.isZero()) {
+        return {signature: sig, weight: weight.toNumber(), address: address};
+      //}
+    }));
+
+    const signatories: SignerMap = {};
+    let totalWeight = 0;
+    for(let sig of sigs) {
+      if(sig !== undefined) {
+        signatories[sig.address] = sig;
+        totalWeight += sig.weight;
+      }
+    }
+
+    return {
+      signatories: signatories,
+      totalWeight: totalWeight,
+      threshold: await multisig.threshold(),
+    };
   }
 };

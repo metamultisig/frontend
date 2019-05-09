@@ -23,36 +23,28 @@ import Link from '@material-ui/core/Link';
 import Snackbar from '@material-ui/core/Snackbar';
 
 import AddressRenderer from './AddressRenderer';
-import { SigningRequest } from './BackendSchema';
+import { SigningRequest, SigningRequestStatus } from './BackendSchema';
 import FunctionCallRenderer from './FunctionCallRenderer';
-import {ProviderContext} from './ProviderContext';
+import { ProviderContext } from './ProviderContext';
 
 const styles = (theme: Theme) =>
   createStyles({
   });
 
-export interface SignerMap {
-  [key: string]: {signature: string, weight: number, address: string}
-}
-
-export interface SigningRequestData {
-  signatories: SignerMap;
-  totalWeight: number;
-  threshold: number;
-  ourWeight: number;
+export interface Signer {
+  sign: (request: SigningRequest) => any;
+  publish: (request: SigningRequest) => any;
 }
 
 interface Props extends WithStyles<typeof styles> {
   multisig: ethers.Contract;
-  request: SigningRequest;
   onSignature: (sig: string) => any;
-  children(sign: () => any, publish: () => any, title: ReactNode, data?: SigningRequestData, inputs?: Array<any>): JSX.Element;
+  children(signer: Signer): JSX.Element;
 }
 
 interface State {
-  signatories?: SignerMap;
-  totalWeight: number;
-  threshold: number;
+  request?: SigningRequest;
+  status?: SigningRequestStatus;
   ourWeight: number;
   showConfirmationDialog: boolean;
   showSignOrSendDialog: boolean;
@@ -62,74 +54,43 @@ interface State {
 class TransactionSigner extends Component<Props, State> {
   static contextType = ProviderContext;
 
-  inputs?: Array<any>;
-
   constructor(props: Props) {
     super(props);
 
     this.state = {
-      signatories: undefined,
-      totalWeight: 0,
-      threshold: 0,
       ourWeight: 0,
       showConfirmationDialog: false,
       showSignOrSendDialog: false,
     };
-
-    const { abi, data } = props.request;
-    if(abi && data && data.length >= 10) {
-      const abiSignature = id(formatSignature(abi)).substring(0, 10).toLowerCase();
-      if(data.slice(0, 10) === abiSignature) {
-        this.inputs = defaultAbiCoder.decode(abi.inputs, '0x' + data.slice(10));
-      }
-    }
   }
 
-  async componentDidMount() {
-    const { request, multisig } = this.props;
-    const hash = await multisig.getTransactionHash(request.destination, request.value || 0, request.data, request.nonce);
-    const sigs = await Promise.all(request.signatures.map(async (sig) => {
-      const address = verifyMessage(hash, sig);
-      const weight = await multisig.keyholders(address);
-      if(!weight.isZero()) {
-        return {signature: sig, weight: weight.toNumber(), address: address};
-      }
-    }));
-
-    const signatories = Object.assign(this.state.signatories || {});
-    let totalWeight = 0;
-    for(let sig of sigs) {
-      if(sig !== undefined) {
-        signatories[sig.address] = sig;
-        totalWeight += sig.weight;
-      }
-    }
-
-    const threshold = await this.props.multisig.threshold();
-
-    const account = await this.context.account();
-    const ourWeight = await this.props.multisig.keyholders(account);
-
+  setRequest = async (request: SigningRequest) => {
     this.setState({
-      signatories: signatories,
-      totalWeight: totalWeight,
-      threshold: threshold.toNumber(),
-      ourWeight: ourWeight.toNumber(),
-    })
+      request: request,
+    });
+    request.getStatus(this.context.provider).then((status) => this.setState({
+      status: status,
+    }));
+    const address = await this.context.provider.getSigner().getAddress();
+    this.props.multisig.keyholders(address).then((weight: number) => this.setState({
+      ourWeight: weight,
+    }));
   }
 
-
-  sign = () => {
+  sign = (request: SigningRequest) => {
+    this.setRequest(request);
     this.setState({
       showConfirmationDialog: true,
-    })
+    });
   }
 
   onApprove = async () => {
+    const { status, ourWeight } = this.state;
+    if(!status) return;
+
     const signer = this.context.provider.getSigner();
     const address = await signer.getAddress();
-    const ourWeight = await this.props.multisig.keyholders(address);
-    if(this.state.totalWeight + ourWeight >= this.state.threshold) {
+    if(status.totalWeight + ourWeight >= status.threshold) {
       this.setState({
         showConfirmationDialog: false,
         showSignOrSendDialog: true,
@@ -145,24 +106,31 @@ class TransactionSigner extends Component<Props, State> {
       showSignOrSendDialog: false,
     });
 
-    const { multisig, request, onSignature } = this.props;
+    const { multisig, onSignature } = this.props;
+
+    const { request } = this.state;
+    if(!request) return;
+
     const signer = this.context.provider.getSigner();
 
-    const hash = await multisig.getTransactionHash(request.destination, request.value || 0, request.data, request.nonce);
+    const hash = await multisig.getTransactionHash(request.destination, request.value, request.data, request.nonce);
     const sig = await signer.signMessage(arrayify(hash));
     onSignature(sig);
   }
 
-  publish = async () => {
+  publish = async (request: SigningRequest) => {
+    this.setRequest(request);
     this.setState({
       showSignOrSendDialog: false,
     });
 
-    if(!this.state.signatories) return;
+    const { status } = this.state;
+    if(!status) return;
 
-    const { multisig, request } = this.props;
+    const { multisig } = this.props;
+
     const address = await this.context.provider.getSigner().getAddress();
-    const sigs = Object.values(this.state.signatories)
+    const sigs = Object.values(status.signatories)
       .filter((sig) => (sig.address !== address))
       .map((sig) => sig.signature);
     const tx = await multisig.submit(request.destination, request.value, request.data, request.nonce, sigs);
@@ -172,15 +140,15 @@ class TransactionSigner extends Component<Props, State> {
   }
 
   render() {
-    const { multisig, children, request, classes } = this.props;
-    const { signatories, totalWeight, threshold, ourWeight } = this.state;
+    const { multisig, children, classes } = this.props;
+    const { request, status } = this.state;
 
     return (
       <>
         <Dialog open={this.state.showConfirmationDialog} onClose={() => this.setState({showConfirmationDialog: false})} aria-labelledby="confirmation-title" aria-describedby="confirmation-description">
           <DialogTitle id="confirmation-title">Sign Transaction?</DialogTitle>
           <DialogContent>
-            <DialogContentText id="confirmation-text">{request.title()}</DialogContentText>
+            <DialogContentText id="confirmation-text">{request && request.title()}</DialogContentText>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => this.setState({showConfirmationDialog: false})} color="primary">Cancel</Button>
@@ -197,7 +165,7 @@ class TransactionSigner extends Component<Props, State> {
           <DialogActions>
             <Button onClick={() => this.setState({showConfirmationDialog: false})} color="primary">Cancel</Button>
             <Button onClick={this.onSignOnly} color="primary">Sign Only</Button>
-            <Button onClick={this.publish} color="primary">Publish</Button>
+            <Button onClick={() => this.publish(request as SigningRequest)} color="primary">Publish</Button>
           </DialogActions>
         </Dialog>
         <Snackbar
@@ -215,7 +183,7 @@ class TransactionSigner extends Component<Props, State> {
             {this.state.lastTxId && (this.state.lastTxId.slice(0, 6) + '…' + this.state.lastTxId.slice(60))}
           </Link> sent</span>}
         />
-        {children(this.sign, this.publish, request.title(), (signatories&&threshold)?{signatories, totalWeight, threshold, ourWeight}:undefined, this.inputs)}
+        {children({sign: this.sign, publish: this.publish})}
       </>
     );
   }

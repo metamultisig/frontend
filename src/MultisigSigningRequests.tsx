@@ -1,4 +1,4 @@
-import { compose, graphql, ChildDataProps } from 'react-apollo';
+import { compose, graphql, ChildProps } from 'react-apollo';
 import { ApolloError, gql } from 'apollo-boost';
 import { ethers } from 'ethers';
 import { BigNumber } from 'ethers/utils';
@@ -61,35 +61,22 @@ interface InputProps extends WithStyles<typeof styles> {
   multisig: ethers.Contract;
 }
 
-interface ChildProps extends WithStyles<typeof styles> {
-  multisig: ethers.Contract
-  signingRequests?: Array<SigningRequest>;
-  loading: boolean;
-  error?: ApolloError;
-}
-
-const withSigningRequests = graphql<InputProps, Response, Variables, ChildProps>(GET_SIGNING_REQUESTS_QUERY, {
+const withSigningRequests = graphql<InputProps, Response>(GET_SIGNING_REQUESTS_QUERY, {
   options: ({ multisig }) => ({
     variables: { address: multisig.address },
   }),
-  props: ({ data, ownProps: { multisig, classes } }) => ({
-    multisig: multisig,
-    classes: classes,
-    loading: (!data || !data.loading)?false:data.loading,
-    error: (!data)?undefined:data.error,
-    signingRequests: (data === undefined || data.multisig === undefined)?undefined:data.multisig.signingRequests.map((request) => new SigningRequest(request)),
-  }),
 });
 
-class MultisigSigningRequests extends Component<ChildProps, {}> {
+class MultisigSigningRequests extends Component<ChildProps<InputProps, Response>, {}> {
   render() {
-    const { multisig, signingRequests, loading, error, classes } = this.props;
-    if(loading) return <Paper className={classes.paper}><Typography>Loading...</Typography></Paper>;
-    if(error || !signingRequests) return <Paper className={classes.paper}><Typography>Error loading signing requests</Typography></Paper>;
+    const { data, multisig, classes } = this.props;
+    if(!data || data.loading) return <Paper className={classes.paper}><Typography>Loading...</Typography></Paper>;
+    if(!data.multisig || !data.multisig.signingRequests || data.error) return <Paper className={classes.paper}><Typography>Error loading signing requests</Typography></Paper>;
 
+    var requests = data.multisig.signingRequests.map((request) => new SigningRequest(multisig.address, request))
     return (
       <Grid container spacing={24}>
-        {signingRequests.map((sr: SigningRequest) => {
+        {requests.map((sr: SigningRequest) => {
           return (
             <Grid item xs={6} key={sr.id}>
               <MultisigSigningRequestCard key={sr.id} multisig={multisig} request={sr} />

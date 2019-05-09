@@ -28,7 +28,7 @@ import ABIFetcher from './ABIFetcher';
 import ABIPicker from './ABIPicker';
 //import findFunctionDefinition from './findFunctionDefinition';
 import {ProviderContext} from './ProviderContext';
-import {SigningRequest} from './BackendSchema';
+import {SigningRequest, RequestData} from './BackendSchema';
 import TransactionSigner from './TransactionSigner';
 
 const styles = (theme: Theme) =>
@@ -58,7 +58,7 @@ const submitSigningRequest = gql`
 
 interface Variables {
   address: string;
-  request: SigningRequest;
+  request: RequestData;
 }
 
 interface Props extends WithStyles<typeof styles> {
@@ -211,7 +211,7 @@ class MultisigTransactionCreator extends Component<Props, State> {
     if(abi && args && this.state.destination) {
       const nonce = await this.props.multisig.nextNonce();
       this.setState({
-        request: new SigningRequest({
+        request: new SigningRequest(this.props.multisig.address, {
           destination: this.state.destination,
           inputs: args,
           abi: abi,
@@ -227,12 +227,20 @@ class MultisigTransactionCreator extends Component<Props, State> {
     }
   }
 
-  onSignature = (sig: string, submitMutation: MutationFn<SigningRequest, Variables>) => {
+  onSignature = (sig: string, submitMutation: MutationFn<RequestData, Variables>) => {
     const request = this.state.request as SigningRequest;
     request.signatures.push(sig);
     submitMutation({variables: {
       address: this.props.multisig.address,
-      request: request
+      request: {
+        destination: request.destination,
+        value: request.value,
+        data: request.data,
+        abi: request.abi,
+        nonce: request.nonce,
+        signatures: request.signatures,
+        description: request.description
+      }
     }});
   }
 
@@ -242,16 +250,15 @@ class MultisigTransactionCreator extends Component<Props, State> {
 
     let signButton = <Button color="primary" disabled>Propose</Button>;
     if(request) {
-      signButton = <Mutation<SigningRequest, Variables> mutation={submitSigningRequest}>
+      signButton = <Mutation<RequestData, Variables> mutation={submitSigningRequest}>
         {(submitMutation) => (
           <TransactionSigner
             multisig={multisig}
-            request={request}
             onSignature={(sig) => this.onSignature(sig, submitMutation)}
           >
-            {(sign) => (
+            {({sign, publish}) => (
               <Button
-                onClick={sign}
+                onClick={() => sign(request)}
                 color="primary"
                 disabled={this.state.request === undefined}
               >

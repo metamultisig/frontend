@@ -24,9 +24,10 @@ import Typography from '@material-ui/core/Typography';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
 import SendIcon from '@material-ui/icons/Send';
 
-import { SigningRequest } from './BackendSchema';
+import { SigningRequest, SigningRequestStatus } from './BackendSchema';
 import AddressRenderer from './AddressRenderer';
 import FunctionCallRenderer from './FunctionCallRenderer';
+import { ProviderContext } from './ProviderContext';
 import TransactionSigner from './TransactionSigner';
 
 const styles = (theme: Theme) =>
@@ -43,11 +44,22 @@ interface Props extends WithStyles<typeof styles> {
 }
 
 interface State {
+  status?: SigningRequestStatus;
+  ourAddress?: string
 }
 
 class MultisigSigningRequestCard extends Component<Props, State> {
+  static contextType = ProviderContext;
+
   constructor(props : Props) {
     super(props);
+    this.state = {}
+  }
+
+  async componentDidMount() {
+    const status = await this.props.request.getStatus(this.context.provider);
+    const ourAddress = await this.context.provider.getSigner().getAddress();
+    this.setState({status, ourAddress});
   }
 
   onSign = (sig: string) => {
@@ -55,20 +67,21 @@ class MultisigSigningRequestCard extends Component<Props, State> {
   }
 
   render() {
-    let {request, multisig, classes} = this.props;
+    const {request, multisig, classes} = this.props;
+    const {status, ourAddress} = this.state;
+    const inputs = request.inputs();
 
     return (
       <TransactionSigner
         multisig={multisig}
-        request={request}
         onSignature={this.onSign}
       >
-        {(sign, publish, title, data, inputs) => (
+        {({sign, publish}) => (
           <Card className={classes.card}>
             <CardHeader
               className={classes.cardHeader}
-              title={title}
-              subheader={data?(data.totalWeight + "/" + data.threshold + " signature weight"):undefined}
+              title={request.title()}
+              subheader={status?(status.totalWeight + "/" + status.threshold + " signature weight"):undefined}
             />
             <CardContent>
               <Table>
@@ -81,13 +94,13 @@ class MultisigSigningRequestCard extends Component<Props, State> {
                   </TableRow>
                   <TableRow>
                     <TableCell>Value</TableCell>
-                    <TableCell>{ethers.utils.formatEther(request.value || 0)}</TableCell>
+                    <TableCell>{ethers.utils.formatEther(request.value)}</TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell>Nonce</TableCell>
                     <TableCell>{request.nonce}</TableCell>
                   </TableRow>
-                  {(inputs&&request.abi)?<>
+                  {(request.abi && inputs)?<>
                     <TableRow>
                       <TableCell>Data</TableCell>
                       <TableCell>
@@ -95,12 +108,16 @@ class MultisigSigningRequestCard extends Component<Props, State> {
                       </TableCell>
                     </TableRow>
                   </>:''}
+                  <TableRow>
+                    <TableCell>Signers</TableCell>
+                    <TableCell>{status && Object.keys(status.signatories).join(', ')}</TableCell>
+                  </TableRow>
                 </TableBody>
               </Table>
             </CardContent>
             <CardActions disableActionSpacing>
-              <IconButton aria-label="Sign" disabled={!data || data.totalWeight >= data.threshold} onClick={sign} title="Sign this request"><CheckCircleIcon /></IconButton>
-              <IconButton aria-label="Send" disabled={!data || data.totalWeight < data.threshold} onClick={publish} title="Publish this request to the blockchain"><SendIcon /></IconButton>
+              <IconButton aria-label="Sign" disabled={!status || status.totalWeight >= status.threshold || !ourAddress || status.signatories[ourAddress] !== undefined} onClick={() => sign(request)} title="Sign this request"><CheckCircleIcon /></IconButton>
+              <IconButton aria-label="Send" disabled={!status || status.totalWeight < status.threshold} onClick={() => publish(request)} title="Publish this request to the blockchain"><SendIcon /></IconButton>
             </CardActions>
           </Card>
         )}
