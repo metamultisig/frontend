@@ -22,7 +22,6 @@ import { createStyles, Theme, withStyles, WithStyles } from '@material-ui/core/s
 
 import logo from './logo.svg';
 import './App.css';
-import MultisigWatcher from './MultisigWatcher';
 import MultisigInterface from './MultisigInterface';
 import {ProviderContext} from './ProviderContext';
 
@@ -30,6 +29,12 @@ import gql from "graphql-tag";
 import { ApolloClient } from 'apollo-boost';
 import { HttpLink } from 'apollo-link-http';
 import { InMemoryCache } from 'apollo-cache-inmemory';
+import Paper from "@material-ui/core/es/Paper/Paper";
+import Table from "@material-ui/core/es/Table/Table";
+import TableHead from "@material-ui/core/es/TableHead/TableHead";
+import TableRow from "@material-ui/core/es/TableRow/TableRow";
+import TableCell from "@material-ui/core/es/TableCell/TableCell";
+import TableBody from "@material-ui/core/es/TableBody/TableBody";
 
 const drawerWidth = 240;
 
@@ -74,18 +79,53 @@ interface WalletInfo {
   weight: number;
 }
 
+interface TransactionInfo {
+    destination: string;
+    value: number;
+    data: string;
+    nonce: number;
+    signatories: string[];
+}
+
 interface State {
   mobileOpen: boolean;
   wallets: Array<WalletInfo>|null;
+  txs: Array<TransactionInfo>|null;
   selectedWallet: WalletInfo|null;
 }
 
 interface Props extends WithStyles<typeof styles, true> {}
 
+const link = new HttpLink({ uri: "https://api.thegraph.com/subgraphs/name/radek1st/multisig" });
+
+// Fetch multisigs for a given keyholder
+const GET_MULTISIGS = gql`
+    query Multisigs($keyholder: String!) {
+        keyholders(where: {address: $keyholder}) {
+            multisig
+            weight
+        }
+    }
+`;
+
+// Fetch all transactions on a given multisig
+const GET_TXS = gql`
+    query Transactions($multisig: String!) {
+        transactions(where: {multisig: $multisig}) { 
+            destination
+            value
+            data
+            signatories
+            nonce
+        }
+    }
+`;
+
+const client = new ApolloClient({ link, cache: new InMemoryCache() });
+
 class App extends Component<Props, State> {
   static contextType = ProviderContext;
 
-  watcher?: MultisigWatcher;
   address?: string;
 
   constructor(props: Props) {
@@ -93,6 +133,7 @@ class App extends Component<Props, State> {
       this.state = {
         mobileOpen: false,
         wallets: null,
+        txs: null,
         selectedWallet: null,
       };
   }
@@ -102,67 +143,59 @@ class App extends Component<Props, State> {
       const address = await this.context.account();
 
       if(address) {
-          // Fetch multisigs for a given keyholder
-
-        const link = new HttpLink({ uri: "https://api.thegraph.com/subgraphs/name/radek1st/multisig" });
-        const GET_MULTISIGS = gql`
-                query Multisigs($keyholder: String!) {
-                    keyholders(where: {address: $keyholder}) {
-                        multisig
-                        weight
-                    }
-                }
-            `;
-        const client = new ApolloClient({ link, cache: new InMemoryCache() });
-        let result = await client.query({
-            query: GET_MULTISIGS,
-            variables: { keyholder: address }
-        });
-
-        let walletList: Array<WalletInfo> = [];
-        for(let e in result.data.keyholders) {
-            let a = result.data.keyholders[e].multisig;
-            let w = result.data.keyholders[e].weight;
-            walletList.push({
-                address: a,
-                title: a.slice(0, 6) + "…" + a.slice(a.length - 4),
-                weight: w
-            });
-        }
-        this.setState({
-            wallets: walletList
-        });
-
-    // this.watcher = new MultisigWatcher(this.context.provider);
-    // this.watcher.addOwnerWatch(address, this.onWalletListChange);
+          this.fetchMultisigs(address);
     }
-
   }
 
   componentWillUnmount() {
-    // if(this.address && this.watcher) {
-    //   this.watcher.removeOwnerWatch(this.address);
-    // }
   }
 
-  onWalletListChange = async (wallets: {[key: string]: number}) => {
-    const provider = this.context.provider;
-    const walletList = await Promise.all(Object.keys(wallets).map(async (wallet) => {
-      let title = await provider.lookupAddress(wallet);
-      if(title == null) {
-        title = wallet.slice(0, 6) + "…" + wallet.slice(wallet.length - 4);
+  fetchTransactions = async (multisig: string) => {
+      let txs = await client.query({
+          query: GET_TXS,
+          variables: { multisig: multisig }
+      });
+
+      let txsList: Array<TransactionInfo> = [];
+      for(let e in txs.data.transactions){
+          let entry = txs.data.transactions[e];
+          txsList.push({
+              destination: entry.destination,
+              value: entry.value,
+              data: entry.data,
+              signatories: entry.signatories,
+              nonce: entry.nonce
+          })
       }
-      return {title: title, address: wallet, weight: wallets[wallet]};
-    }));
-    this.setState({
-      wallets: walletList,
-    });
+      this.setState({txs: txsList})
+  }
+
+  fetchMultisigs = async (address: string) => {
+      let wallets = await client.query({
+          query: GET_MULTISIGS,
+          variables: { keyholder: address }
+      });
+
+      let walletList: Array<WalletInfo> = [];
+      for(let e in wallets.data.keyholders) {
+          let entry = wallets.data.keyholders[e];
+          walletList.push({
+              address: entry.multisig,
+              title: entry.multisig.slice(0, 6) + "…" + entry.multisig.slice(entry.multisig.length - 4),
+              weight: entry.weight
+          });
+      }
+      this.setState({
+          wallets: walletList
+      });
   }
 
   onWalletClick = (wallet: WalletInfo) => (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
     this.setState({
       selectedWallet: wallet,
     })
+      //this.fetchTransactions(this.state.selectedWallet.address);
+      this.fetchTransactions("0x7993c2776ccfc2be1270ea7b1df739f2c478afa0");
   }
 
   handleDrawerToggle = () => {
@@ -208,18 +241,45 @@ class App extends Component<Props, State> {
 
     let body = (
       <Typography paragraph>
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-        incididunt ut labore et dolore magna aliqua. Rhoncus dolor purus non enim praesent
-        elementum facilisis leo vel. Risus at ultrices mi tempus imperdiet. Semper risus in
-        hendrerit gravida rutrum quisque non tellus. Convallis convallis tellus id interdum
-        velit laoreet id donec ultrices. Odio morbi quis commodo odio aenean sed adipiscing.
-        Amet nisl suscipit adipiscing bibendum est ultricies integer quis. Cursus euismod quis
-        viverra nibh cras. Metus vulputate eu scelerisque felis imperdiet proin fermentum leo.
-        Mauris commodo quis imperdiet massa tincidunt. Cras tincidunt lobortis feugiat vivamus
-        at augue. At augue eget arcu dictum varius duis at consectetur lorem. Velit sed
-        ullamcorper morbi tincidunt. Lorem donec massa sapien faucibus et molestie ac.
+        Meta Multisig Wallet
       </Typography>
     );
+
+    let table = (<div/>);
+    if(this.state.selectedWallet !== null) {
+          table = (
+              <div>
+                  <Typography variant="h6">Past Transactions</Typography>
+                  <Paper>
+                      <Table>
+                        <TableHead>
+                        <TableRow>
+                        <TableCell>Nonce</TableCell>
+                        <TableCell align="right">Value</TableCell>
+                            <TableCell align="right">Destination</TableCell>
+                            <TableCell align="right">Data</TableCell>
+                            <TableCell align="right">Signatories</TableCell>
+                         </TableRow>
+                         </TableHead>
+                            <TableBody>
+                            {this.state.txs && this.state.txs.map(row => (
+                                <TableRow key={row.nonce}>
+                                    <TableCell component="th" scope="row">
+                                        {row.nonce}
+                                    </TableCell>
+                                    <TableCell align="right">{row.value}</TableCell>
+                                    <TableCell align="right">{row.destination}</TableCell>
+                                    <TableCell align="right">{row.data.substr(0,40) + "..."}</TableCell>
+                                    <TableCell align="right">{row.signatories.length}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                        </Table>
+                    </Paper>
+              </div>
+        );
+    };
+
     if(this.state.selectedWallet !== null) {
       body = (
         <MultisigInterface wallet={this.state.selectedWallet} />
@@ -273,6 +333,7 @@ class App extends Component<Props, State> {
         <main className={classes.content}>
           <div className={classes.toolbar} />
           {body}
+          {table}
         </main>
       </div>
     );
