@@ -26,6 +26,11 @@ import MultisigWatcher from './MultisigWatcher';
 import MultisigInterface from './MultisigInterface';
 import {ProviderContext} from './ProviderContext';
 
+import gql from "graphql-tag";
+import { ApolloClient } from 'apollo-boost';
+import { HttpLink } from 'apollo-link-http';
+import { InMemoryCache } from 'apollo-cache-inmemory';
+
 const drawerWidth = 240;
 
 const styles = (theme: Theme) =>
@@ -93,18 +98,51 @@ class App extends Component<Props, State> {
   }
 
   async componentDidMount() {
-    this.watcher = new MultisigWatcher(this.context.provider);
 
-    const address = await this.context.account();
-    if(address) {
-      this.watcher.addOwnerWatch(address, this.onWalletListChange);
+      const address = await this.context.account();
+
+      if(address) {
+          // Fetch multisigs for a given keyholder
+
+        const link = new HttpLink({ uri: "https://api.thegraph.com/subgraphs/name/radek1st/multisig" });
+        const GET_MULTISIGS = gql`
+                query Multisigs($keyholder: String!) {
+                    keyholders(where: {address: $keyholder}) {
+                        multisig
+                        weight
+                    }
+                }
+            `;
+        const client = new ApolloClient({ link, cache: new InMemoryCache() });
+        let result = await client.query({
+            query: GET_MULTISIGS,
+            variables: { keyholder: address }
+        });
+
+        let walletList: Array<WalletInfo> = [];
+        for(let e in result.data.keyholders) {
+            let a = result.data.keyholders[e].multisig;
+            let w = result.data.keyholders[e].weight;
+            walletList.push({
+                address: a,
+                title: a.slice(0, 6) + "…" + a.slice(a.length - 4),
+                weight: w
+            });
+        }
+        this.setState({
+            wallets: walletList
+        });
+
+    // this.watcher = new MultisigWatcher(this.context.provider);
+    // this.watcher.addOwnerWatch(address, this.onWalletListChange);
     }
+
   }
 
   componentWillUnmount() {
-    if(this.address && this.watcher) {
-      this.watcher.removeOwnerWatch(this.address);
-    }
+    // if(this.address && this.watcher) {
+    //   this.watcher.removeOwnerWatch(this.address);
+    // }
   }
 
   onWalletListChange = async (wallets: {[key: string]: number}) => {
